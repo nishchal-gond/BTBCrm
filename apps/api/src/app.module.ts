@@ -31,6 +31,7 @@ import { SearchModule } from "./search/search.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SlackModule } from "./slack/slack.module";
 import { SsoModule } from "./sso/sso.module";
+import { StaffModule } from "./staff/staff.module";
 import { SyncModule } from "./sync/sync.module";
 import { TelemetryModule } from "./telemetry/telemetry.module";
 import { TrackingModule } from "./tracking/tracking.module";
@@ -73,6 +74,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		SettingsModule,
 		WorkspaceModule,
 		SsoModule,
+		StaffModule,
 		SlackModule,
 		BackfillModule,
 		TelemetryModule,

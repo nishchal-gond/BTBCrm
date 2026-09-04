@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TRPCModule } from "nestjs-trpc";
 import { ContextLogger } from "../logging/context-logger";
 import { formatTrpcError } from "./error-formatter";
+import { ActorMiddleware } from "./middlewares/actor.middleware";
 import { AuthMiddleware } from "./middlewares/auth.middleware";
 import { DomainErrorMiddleware } from "./middlewares/domain-error.middleware";
 import { LoggingMiddleware } from "./middlewares/logging.middleware";
@@ -25,9 +26,10 @@ import { TrpcErrorHandler } from "./trpc-error.handler";
 		TrpcErrorHandler,
 		LoggingMiddleware,
 		DomainErrorMiddleware,
+		ActorMiddleware,
 		AuthMiddleware,
 		SessionOnlyMiddleware,
 	],
-	exports: [AuthMiddleware, SessionOnlyMiddleware],
+	exports: [ActorMiddleware, AuthMiddleware, SessionOnlyMiddleware],
 })
 export class TrpcModule {}

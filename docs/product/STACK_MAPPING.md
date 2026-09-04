@@ -94,7 +94,7 @@ client record and must not become it. The `Client` model is new and standalone.
 | Auth shell, sign-in, allow-list, session | **Built.** `apps/app/app/(landing)/sign-in`, `packages/auth`. |
 | App layout, sidebar, command palette, record sheets, tables with URL state | **Built** for companies, contacts and deals. The shell and table machinery are reusable. The entities are not. |
 | Design tokens | **Not the product's.** `packages/ui` still carries the base's flat white and green palette. `DESIGN_SYSTEM.md` defines the dark Dubai Financial Command Center tokens that replace it. |
-| Users and roles | **Partly.** Users, invitations and Better Auth organisation membership exist. Product roles (`StaffProfile`) do not. |
+| Users and roles | **Phase 1 built.** `StaffProfile`, `Team`, the access module in `@crm/db/access`, `ActorMiddleware` and the `staff.*` procedures. See `docs/api.md`, *Staff roles and the actor*. No admin screen yet. |
 | Settings | **Built** for the base's concerns (connections, SSO, general). Product settings are not. |
 | Company calendar | **Not built.** Google and Outlook calendar sync exists as data; there is no calendar UI and no company events. |
 | Clients, leads, students, programs, deposits, tasks, audit log, dashboard, globe | **Not built.** |
@@ -122,9 +122,10 @@ changed:
 
 The order in `PRODUCT_ARCHITECTURE.md` §12, with the base taken into account.
 
-1. **Roles and access.** `StaffProfile`, `Team`, `packages/db/src/access/`, a
-   `requireRole` tRPC middleware, and the permission suite skeleton. Nothing
-   renders yet. This comes first because every later procedure depends on it.
+1. **Roles and access.** `StaffProfile`, `Team`, `packages/db/src/access.ts`,
+   `ActorMiddleware`, `requireCapability`, and the permission suite skeleton.
+   Nothing renders yet. This comes first because every later procedure depends
+   on it. **Built.** Six roles, as the CRM-New build decided.
 2. **Design tokens.** Replace the base palette in `packages/ui` with
    `DESIGN_SYSTEM.md`. Dark by default. This is one file and it changes every
    screen, so it happens before screens are built.

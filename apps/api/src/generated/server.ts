@@ -30,6 +30,7 @@ import { savedViewListInput, savedViewListOutput, savedViewCreateInput, savedVie
 import { agentModelOutput, modelCatalogOutput, setAgentModelInput, researchKeyOutput, setResearchKeyInput, archiveRetentionOutput, setArchiveRetentionDaysInput } from "../settings/settings.contracts";
 import { slackStatusOutput, slackMatchesOutput, slackChannelsInput, slackChannelsOutput, slackJoinChannelInput, slackJoinChannelOutput, slackRefreshPeopleOutput, slackCreateChannelInput, slackCreateChannelOutput, slackDisconnectOutput } from "../slack/slack.contracts";
 import { ssoSignInOptionsOutput, ssoSettingsOutput, ssoProviderListInput, ssoProviderListOutput, registerSsoProviderInput, ssoProviderOutput, deleteSsoProviderInput, deleteSsoProviderOutput } from "../sso/sso.contracts";
+import { staffMeOutput, staffListInput, staffListOutput, setStaffRoleInput, staffMemberOutput, setStaffActiveInput, assignTeamInput, updateMeInput, teamListOutput, createTeamInput, teamOutput, updateTeamInput } from "../staff/staff.contracts";
 import { trackingSettingsOutput, trackingFlagInput, cookieLifetimeInput, addDomainInput, trackedDomainOutput, removeDomainInput, rotateSiteIdOutput, verifyInput, verifyOutput, sourcesOutput, companyActivityInput, websiteActivityOutput, contactActivityInput } from "../tracking/tracking.contracts";
 import { workspaceOutput, memberListInput, memberListOutput, updateWorkspaceInput, setMemberRoleInput, workspaceMemberOutput } from "../workspace/workspace.contracts";
 import type { UsersRouter } from "../users/users.router";
@@ -679,6 +680,42 @@ const appRouter = t.router({
     remove: publicProcedure
       .input(deleteSsoProviderInput)
       .output(deleteSsoProviderOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
+  staff: t.router({
+    me: publicProcedure
+      .output(staffMeOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    directory: publicProcedure
+      .input(staffListInput)
+      .output(staffListOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    setRole: publicProcedure
+      .input(setStaffRoleInput)
+      .output(staffMemberOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    setActive: publicProcedure
+      .input(setStaffActiveInput)
+      .output(staffMemberOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    assignTeam: publicProcedure
+      .input(assignTeamInput)
+      .output(staffMemberOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    updateMe: publicProcedure
+      .input(updateMeInput)
+      .output(staffMemberOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    teams: publicProcedure
+      .output(teamListOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    createTeam: publicProcedure
+      .input(createTeamInput)
+      .output(teamOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    updateTeam: publicProcedure
+      .input(updateTeamInput)
+      .output(teamOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
   tracking: t.router({

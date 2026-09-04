@@ -48,7 +48,8 @@ model User {
 
   ssoproviders SsoProvider[]
 
-  apiKeys Apikey[]
+  apiKeys       Apikey[]
+  staffProfiles StaffProfile[]
 
   @@unique([email])
   @@map("user")
@@ -1582,4 +1583,53 @@ model Apikey {
   @@index([configId])
   @@index([key])
   @@map("apikey")
+}
+
+enum StaffRole {
+  ADMIN
+  SALES_MANAGER
+  SALES
+  MENTOR_MANAGER
+  MENTOR
+  FINANCE
+}
+
+enum TeamKind {
+  SALES
+  MENTOR
+}
+
+model Team {
+  id        String         @id @default(cuid())
+  name      String
+  kind      TeamKind
+  managerId String?
+  manager   StaffProfile?  @relation("TeamManager", fields: [managerId], references: [userId], onDelete: SetNull)
+  isActive  Boolean        @default(true)
+  members   StaffProfile[] @relation("TeamMembers")
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @db.Timestamptz(3)
+
+  @@unique([name])
+  @@index([managerId])
+  @@index([kind, isActive])
+  @@map("team")
+}
+
+model StaffProfile {
+  userId       String    @id
+  user         User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         StaffRole @default(SALES)
+  teamId       String?
+  team         Team?     @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  timezone     String    @default("Asia/Dubai")
+  phone        String?
+  isActive     Boolean   @default(true)
+  managedTeams Team[]    @relation("TeamManager")
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([role, isActive])
+  @@index([teamId])
+  @@map("staffProfile")
 }

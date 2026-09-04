@@ -369,6 +369,23 @@ async function seedOwners(): Promise<string[]> {
 	return created.map((user) => user.id);
 }
 
+const STAFF_ROLE_CYCLE = ["ADMIN", "SALES", "MENTOR"] as const;
+
+async function seedStaff(ownerIds: string[]): Promise<void> {
+	for (const [index, userId] of ownerIds.entries()) {
+		await db.staffProfile.upsert({
+			where: { userId },
+			create: {
+				userId,
+				role: STAFF_ROLE_CYCLE[index % STAFF_ROLE_CYCLE.length] ?? "SALES",
+			},
+			update: {},
+		});
+	}
+
+	console.log(`Staff profiles ready for ${ownerIds.length} user(s).`);
+}
+
 async function seedCompanies(
 	ownerIds: string[],
 ): Promise<{ id: string; name: string; domain: string }[]> {
@@ -994,6 +1011,7 @@ async function seedActivities(
 async function main() {
 	const rates = await seedRates();
 	const ownerIds = await seedOwners();
+	await seedStaff(ownerIds);
 	const companies = await seedCompanies(ownerIds);
 	const contacts = await seedContacts(companies, ownerIds);
 	const deals = await seedDeals(companies, contacts, ownerIds);

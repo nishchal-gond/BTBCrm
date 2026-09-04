@@ -311,3 +311,37 @@ Read it before touching any amount, total, chart or rate.
 - **Background writes need polling, not invalidation** — `refetchInterval` while
   `PENDING`/`RUNNING`, via `isEnriching()` and `ENRICHMENT_POLL_MS`. **Lists poll too,
   not just the sheet.**
+
+## Staff roles and the actor
+
+Product roles live in `StaffProfile` (`@crm/db`): one row per user, keyed by
+`userId`, holding `role`, `teamId`, `timezone` and `isActive`. The six roles are
+`ADMIN`, `SALES_MANAGER`, `SALES`, `MENTOR_MANAGER`, `MENTOR` and `FINANCE`. The
+workspace `Member.role` (owner, admin, member) is Better Auth plumbing and decides
+nothing about clients.
+
+- **The rule is defined once, in `@crm/db/access`.** `loadActor` reads the profile
+  and the teams the user manages. `canAccessClient`, `canEditClient`,
+  `canAccessFinancials` and `visibleOwnerIds` are the only definitions of who sees
+  a client. A list procedure spreads `visibleOwnerIds` into its `where`; a write
+  loads the target through the same rule first.
+- **`ActorMiddleware` puts the actor on the context.** `@UseMiddlewares(AuthMiddleware)`
+  on the router and `@UseMiddlewares(ActorMiddleware)` on every procedure that
+  touches product data. It refuses a user with no active profile.
+  `ActorTrpcContext` carries `actor`.
+- **Services check capabilities, not roles.** `requireCapability(actor,
+  "users.manage", message)` throws `ForbiddenException`, which
+  `DomainErrorMiddleware` maps to `FORBIDDEN`. Do not compare `actor.role` in a
+  service. Add a capability to the matrix in `access.ts`.
+- **The first profile is an admin.** `StaffService.ensureProfile` runs on sign-in
+  through `onSignedIn` and from `staff.me`. The first row is `ADMIN`. Every later
+  row is `SALES` until an admin changes it.
+- **Nobody changes their own role or active flag, admins included.** The last
+  active admin cannot be demoted or deactivated. The check locks the admin rows
+  with `FOR UPDATE`.
+- **A team manager holds the matching role.** `StaffService` checks it for the
+  message. The `team_validate_manager` trigger checks it in the database, so no
+  code path can skip it.
+- **Authorization is not in Postgres.** Prisma connects as one role, so there is
+  no Row Level Security here. The access module is the boundary.
+  `docs/product/STACK_MAPPING.md` §2 says why, and what a second lock looks like.
