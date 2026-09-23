@@ -127,8 +127,10 @@ function describe(channel: PickerChannel, canInviteItself: boolean): string {
 
 	if (channel.isMember) return `Trading Academy CRM is in${people}`;
 	if (!channel.classified) return `Not read from Slack yet${people}`;
-	if (!channel.isPrivate) return `Trading Academy CRM can join this one${people}`;
-	if (canInviteItself) return `Private. Trading Academy CRM joins as you${people}`;
+	if (!channel.isPrivate)
+		return `Trading Academy CRM can join this one${people}`;
+	if (canInviteItself)
+		return `Private. Trading Academy CRM joins as you${people}`;
 	if (channel.inviteRequestedAt)
 		return `Private. Waiting on an invite${people}`;
 	return `Private. Someone inside has to invite Trading Academy CRM${people}`;
