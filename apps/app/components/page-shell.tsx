@@ -70,7 +70,7 @@ function PageShellTitle({ className, ...props }: React.ComponentProps<"h1">) {
 		<h1
 			data-slot="page-shell-title"
 			className={cn(
-				"col-start-1 row-start-1 min-w-0 self-center text-balance font-medium text-2xl tracking-tight md:text-3xl",
+				"col-start-1 row-start-1 min-w-0 self-center text-balance font-semibold text-lg tracking-tight md:text-xl",
 				className,
 			)}
 			{...props}

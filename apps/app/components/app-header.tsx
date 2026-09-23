@@ -1,7 +1,5 @@
 "use client";
 
-import Asleep from "@carbon/icons-react/es/Asleep";
-import Light from "@carbon/icons-react/es/Light";
 import Logout from "@carbon/icons-react/es/Logout";
 import Menu from "@carbon/icons-react/es/Menu";
 import UserAvatar from "@carbon/icons-react/es/UserAvatar";
@@ -20,7 +18,6 @@ import { Separator } from "@crm/ui/components/separator";
 import { Skeleton } from "@crm/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { EnrichmentQueue } from "@/components/enrichment-queue";
 import { useMobileNav } from "@/components/mobile-nav";
@@ -103,9 +100,6 @@ export function AppHeaderFallback() {
 }
 
 function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }) {
-	const { resolvedTheme, setTheme } = useTheme();
-	const isDark = resolvedTheme === "dark";
-
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
@@ -128,16 +122,6 @@ function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }) {
 					<UserAvatar />
 					<span className="min-w-0 truncate">{user.email}</span>
 				</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					onSelect={(event) => {
-						event.preventDefault();
-						setTheme(isDark ? "light" : "dark");
-					}}
-				>
-					{isDark ? <Light /> : <Asleep />}
-					{isDark ? "Light mode" : "Dark mode"}
-				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onSignOut}>
 					<Logout />

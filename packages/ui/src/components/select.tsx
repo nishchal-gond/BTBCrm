@@ -37,7 +37,7 @@ const selectTriggerVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"border border-input bg-background py-2 pr-2 pl-2.5 hover:border-ring/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 dark:bg-muted dark:hover:bg-accent",
+					"border border-input bg-background py-2 pr-2 pl-2.5 hover:border-ring/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 dark:bg-muted dark:hover:bg-hover",
 				ghost:
 					"border border-transparent bg-transparent px-2 hover:border-input hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:border-input data-[state=open]:bg-muted/40 [&_svg]:opacity-0 hover:[&_svg]:opacity-100 focus-visible:[&_svg]:opacity-100 data-[state=open]:[&_svg]:opacity-100",
 			},
@@ -130,7 +130,7 @@ function SelectItem({
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"relative flex w-full cursor-default items-center gap-2 rounded-sm py-2 pr-8 pl-2 text-xs outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				"relative flex w-full cursor-default items-center gap-2 rounded-sm py-2 pr-8 pl-2 text-xs outline-hidden select-none focus:bg-hover focus:text-hover-foreground not-data-[variant=destructive]:focus:**:text-hover-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
 				className,
 			)}
 			{...props}
