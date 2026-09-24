@@ -69,14 +69,16 @@ export function judgeEntry(
 	if (entryType === "PAYMENT" && fils < 0) {
 		return {
 			allowed: false,
-			because: "A payment is money in. Record money out as a refund.",
+			because:
+				"You entered a negative amount. A payment is money in; record money out as a refund.",
 		};
 	}
 
 	if (entryType === "REFUND" && fils > 0) {
 		return {
 			allowed: false,
-			because: "A refund is money out, so its amount is negative.",
+			because:
+				"You entered a positive amount. A refund is money out, so it must be negative.",
 		};
 	}
 

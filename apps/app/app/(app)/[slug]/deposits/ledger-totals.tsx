@@ -46,8 +46,11 @@ function Cell({
 			aria-pressed={selected}
 			onClick={onSelect}
 			className={cn(
-				"flex flex-col items-start gap-1 px-4 py-3 text-left transition-colors duration-[var(--dur-fast)] ease-out hover:bg-hover",
-				selected && "bg-accent-muted",
+				"relative flex flex-col items-start gap-1 px-4 py-3 text-left transition-colors duration-[var(--dur-fast)] ease-out",
+				"before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent before:opacity-0",
+				selected
+					? "bg-accent-muted before:opacity-100 hover:bg-accent-muted"
+					: "hover:bg-hover",
 			)}
 		>
 			{body}
@@ -81,7 +84,11 @@ export function LedgerTotals({
 		>
 			<Cell
 				label="Total"
-				note={`Derived from ${totals.entryCount} ${totals.entryCount === 1 ? "entry" : "entries"}`}
+				note={
+					compact
+						? "Derived, never stored"
+						: `Derived from ${totals.entryCount} ${totals.entryCount === 1 ? "entry" : "entries"}`
+				}
 				onSelect={onFilter ? () => onFilter([]) : undefined}
 				selected={onFilter ? showing.length === 0 : undefined}
 			>

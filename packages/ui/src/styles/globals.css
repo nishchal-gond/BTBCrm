@@ -1010,8 +1010,16 @@
 	[data-slot="sheet-trigger"],
 	[data-slot="popover-trigger"],
 	[data-slot="client-ref"],
-	[data-slot="client-link"] {
+	[data-slot="client-link"],
+	[data-slot="sheet-close"],
+	[data-slot="dialog-close"],
+	[data-slot="alert-dialog-close"] {
 		min-height: 44px;
+	}
+
+	[data-slot="sheet-content"] > [data-slot="sheet-close"],
+	[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+		min-width: 44px;
 	}
 
 	[data-slot="client-ref"],

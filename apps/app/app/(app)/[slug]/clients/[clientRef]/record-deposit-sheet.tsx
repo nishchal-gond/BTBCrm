@@ -31,7 +31,7 @@ import { depositEntryLabel } from "@/components/crm/deposit-entry";
 import { formatLedgerAmount } from "@/components/crm/money";
 import {
 	COMPANY_TIME_ZONE,
-	middayInCompanyZone,
+	instantForCompanyDay,
 	todayInCompanyZone,
 } from "@/lib/company-time";
 import { useTRPC } from "@/lib/trpc/client";
@@ -143,7 +143,7 @@ export function RecordDepositSheet({ clientRef }: { clientRef: string }) {
 							reference: reference.trim() === "" ? null : reference.trim(),
 							note: note.trim() === "" ? null : note.trim(),
 							correctsId: corrects && correctsId !== "" ? correctsId : null,
-							occurredAt: middayInCompanyZone(occurredOn),
+							occurredAt: instantForCompanyDay(occurredOn),
 						});
 					}}
 				>

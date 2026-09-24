@@ -37,6 +37,15 @@ function wallClockOf(instant: Date): number {
 	);
 }
 
+export function instantForCompanyDay(
+	day: string,
+	now: Date = new Date(),
+): string {
+	return day === todayInCompanyZone(now)
+		? now.toISOString()
+		: middayInCompanyZone(day);
+}
+
 export function middayInCompanyZone(day: string): string {
 	const wanted = Date.parse(`${day}T12:00:00Z`);
 

@@ -11,7 +11,7 @@ import {
 } from "@/components/crm/deposit-entry";
 import { Money } from "@/components/crm/money";
 import { useTRPC } from "@/lib/trpc/client";
-import { ClientMoment } from "./client-moment";
+import { CompanyMoment } from "./client-moment";
 import { RecordDepositSheet } from "./record-deposit-sheet";
 
 export function ClientDeposits({
@@ -92,15 +92,19 @@ export function ClientDeposits({
 							key={row.id}
 							className="flex flex-wrap items-center gap-x-4 gap-y-2 border-subtle border-b px-4 py-3 last:border-b-0"
 						>
-							<span className="font-mono text-muted-foreground text-xs tabular-nums">
-								<ClientMoment date={row.occurredAt} />
+							<span className="w-56 shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+								<CompanyMoment date={row.occurredAt} />
 							</span>
-							<DepositEntryBadge entry={row.entryType} />
-							<Money
-								amount={row.amount}
-								currency={row.currency}
-								tone="signed"
-							/>
+							<span className="w-32 shrink-0">
+								<DepositEntryBadge entry={row.entryType} />
+							</span>
+							<span className="w-48 shrink-0 text-right">
+								<Money
+									amount={row.amount}
+									currency={row.currency}
+									tone="signed"
+								/>
+							</span>
 							<span className="text-muted-foreground text-xs">
 								{row.method ?? "Method not recorded"}
 								{row.reference ? ` · ${row.reference}` : ""}
