@@ -1630,13 +1630,15 @@ model StaffProfile {
   createdAt    DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
 
-  recordedDeposits   Deposit[]             @relation("DepositRecorder")
-  verifiedDeposits   Deposit[]             @relation("DepositVerifier")
-  createdClients     Client[]              @relation("ClientCreator")
-  salesOwnedClients  Client[]              @relation("ClientSalesOwner")
-  mentorOwnedClients Client[]              @relation("ClientMentorOwner")
-  convertedClients   Client[]              @relation("ClientConverter")
-  clientStatusEdits  ClientStatusHistory[] @relation("ClientStatusChanger")
+  mentoredEnrollments Enrollment[]          @relation("EnrollmentMentor")
+  createdEnrollments  Enrollment[]          @relation("EnrollmentCreator")
+  recordedDeposits    Deposit[]             @relation("DepositRecorder")
+  verifiedDeposits    Deposit[]             @relation("DepositVerifier")
+  createdClients      Client[]              @relation("ClientCreator")
+  salesOwnedClients   Client[]              @relation("ClientSalesOwner")
+  mentorOwnedClients  Client[]              @relation("ClientMentorOwner")
+  convertedClients    Client[]              @relation("ClientConverter")
+  clientStatusEdits   ClientStatusHistory[] @relation("ClientStatusChanger")
 
   @@index([role, isActive])
   @@index([teamId])
@@ -1687,6 +1689,7 @@ model Client {
 
   statusHistory ClientStatusHistory[]
   deposits      Deposit[]
+  enrollments   Enrollment[]
 
   @@unique([emailNorm], map: "client_emailNorm_active_key", where: { emailNorm: { not: null }, status: { not: "LOST" } })
   @@unique([phoneNorm], map: "client_phoneNorm_active_key", where: { phoneNorm: { not: null }, status: { not: "LOST" } })
@@ -1748,4 +1751,53 @@ model Deposit {
   @@index([correctsId])
   @@index([verifiedById])
   @@map("deposit")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  WITHDRAWN
+}
+
+model Program {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  name          String
+  description   String?
+  durationWeeks Int
+  priceAed      Decimal      @db.Decimal(14, 2)
+  isActive      Boolean      @default(true)
+  enrollments   Enrollment[]
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([isActive, code])
+  @@map("program")
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  clientId    String
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  programId   String
+  program     Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
+  mentorId    String?
+  mentor      StaffProfile?    @relation("EnrollmentMentor", fields: [mentorId], references: [userId], onDelete: SetNull)
+  cohort      String?
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now()) @db.Timestamptz(3)
+  completedAt DateTime?        @db.Timestamptz(3)
+  closedAt    DateTime?        @db.Timestamptz(3)
+  notes       String?
+  createdById String
+  createdBy   StaffProfile     @relation("EnrollmentCreator", fields: [createdById], references: [userId], onDelete: Restrict)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@unique([clientId], map: "enrollment_one_open_per_client", where: { closedAt: null })
+  @@index([clientId, enrolledAt(sort: Desc)])
+  @@index([mentorId, status])
+  @@index([programId])
+  @@index([createdById])
+  @@map("enrollment")
 }

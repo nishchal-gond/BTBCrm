@@ -2,6 +2,7 @@
 
 import Building from "@carbon/icons-react/es/Building";
 import Close from "@carbon/icons-react/es/Close";
+import Course from "@carbon/icons-react/es/Course";
 import Dashboard from "@carbon/icons-react/es/Dashboard";
 import Education from "@carbon/icons-react/es/Education";
 import Identification from "@carbon/icons-react/es/Identification";
@@ -62,6 +63,7 @@ const ITEMS: RailItem[] = [
 	},
 	{ title: "Students", href: "/students", icon: Education, match: "prefix" },
 	{ title: "Deposits", href: "/deposits", icon: Money, match: "prefix" },
+	{ title: "Programmes", href: "/programs", icon: Course, match: "prefix" },
 	{ title: "Companies", href: "/companies", icon: Building, match: "prefix" },
 	{
 		title: "Contacts",

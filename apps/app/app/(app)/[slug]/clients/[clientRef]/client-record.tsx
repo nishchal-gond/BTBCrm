@@ -24,6 +24,7 @@ import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 import { ClientActions } from "./client-actions";
 import { ClientActivity } from "./client-activity";
 import { ClientDeposits } from "./client-deposits";
+import { ClientEnrollment } from "./client-enrollment";
 import { ClientMoment } from "./client-moment";
 import { Fact, Facts } from "./facts";
 import { ClientNotFound } from "./not-found-state";
@@ -143,26 +144,11 @@ export function ClientRecord({ clientRef }: { clientRef: string }) {
 					</TabsContent>
 
 					<TabsContent value="student" className="pt-4">
-						{converted ? (
-							<Facts>
-								<Fact label="Mentor">{row.mentorOwner?.name ?? null}</Fact>
-								<Fact label="Converted at" numeric>
-									{row.convertedAt ? (
-										<ClientMoment date={row.convertedAt} />
-									) : null}
-								</Fact>
-							</Facts>
-						) : (
-							<p className="text-muted-foreground text-sm">
-								Nothing here until {row.name} converts. The tab stays so the
-								path is visible.
-							</p>
-						)}
-						<Separator className="my-4" />
-						<p className="text-muted-foreground text-xs">
-							Programmes and enrolments are not built yet. Money is on the
-							Deposits tab.
-						</p>
+						<ClientEnrollment
+							clientRef={row.clientRef}
+							clientName={row.name}
+							converted={converted}
+						/>
 					</TabsContent>
 
 					<TabsContent value="deposits" className="pt-4">

@@ -1,5 +1,14 @@
 export const COMPANY_TIME_ZONE = "Asia/Dubai";
 
+const ZONE_LABELS = {
+	"Asia/Dubai": "GST",
+} as const satisfies Record<string, string>;
+
+export const COMPANY_TIME_LABEL: string =
+	COMPANY_TIME_ZONE in ZONE_LABELS
+		? ZONE_LABELS[COMPANY_TIME_ZONE as keyof typeof ZONE_LABELS]
+		: COMPANY_TIME_ZONE;
+
 const DAY = new Intl.DateTimeFormat("en-CA", {
 	timeZone: COMPANY_TIME_ZONE,
 	year: "numeric",

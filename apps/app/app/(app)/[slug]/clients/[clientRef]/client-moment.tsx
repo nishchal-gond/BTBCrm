@@ -1,5 +1,5 @@
 import { LocalDateTime } from "@/components/local-date-time";
-import { COMPANY_TIME_ZONE } from "@/lib/company-time";
+import { COMPANY_TIME_LABEL, COMPANY_TIME_ZONE } from "@/lib/company-time";
 
 const MOMENT: Intl.DateTimeFormatOptions = {
 	day: "2-digit",
@@ -23,9 +23,13 @@ const COMPANY_MOMENT: Intl.DateTimeFormatOptions = {
 	hour: "2-digit",
 	minute: "2-digit",
 	hour12: false,
-	timeZoneName: "short",
 };
 
 export function CompanyMoment({ date }: { date: string }) {
-	return <LocalDateTime date={date} options={COMPANY_MOMENT} />;
+	return (
+		<>
+			<LocalDateTime date={date} options={COMPANY_MOMENT} />{" "}
+			{COMPANY_TIME_LABEL}
+		</>
+	);
 }

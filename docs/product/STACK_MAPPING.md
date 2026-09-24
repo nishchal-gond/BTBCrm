@@ -143,7 +143,10 @@ The order in `PRODUCT_ARCHITECTURE.md` §12, with the base taken into account.
    every delete. Totals are derived by aggregate, not by the view §5.5 names —
    Prisma maps views read-only behind a preview flag, and an aggregate carries
    the same guarantee with no stored column anywhere.
-5. **Programs and enrollments.**
+5. **Programs and enrollments.** **Built.** `Program` and `Enrollment`, one
+   running enrolment per client by partial unique index, and the trigger that
+   closes the `CONVERTED → STUDENT` gap: a client becomes a student by
+   enrolling, never on entry and never by a bare status move.
 6. **Company calendar.** `CompanyEvent`, occurrence expansion, month, week, day
    and agenda views, filters, privacy between owners.
 7. **Tasks, sales team, mentors.**
