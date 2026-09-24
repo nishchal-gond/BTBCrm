@@ -5,6 +5,7 @@ import Close from "@carbon/icons-react/es/Close";
 import Dashboard from "@carbon/icons-react/es/Dashboard";
 import Education from "@carbon/icons-react/es/Education";
 import Identification from "@carbon/icons-react/es/Identification";
+import Money from "@carbon/icons-react/es/Money";
 import Partnership from "@carbon/icons-react/es/Partnership";
 import Settings from "@carbon/icons-react/es/Settings";
 import UserFollow from "@carbon/icons-react/es/UserFollow";
@@ -60,6 +61,7 @@ const ITEMS: RailItem[] = [
 		match: "prefix",
 	},
 	{ title: "Students", href: "/students", icon: Education, match: "prefix" },
+	{ title: "Deposits", href: "/deposits", icon: Money, match: "prefix" },
 	{ title: "Companies", href: "/companies", icon: Building, match: "prefix" },
 	{
 		title: "Contacts",

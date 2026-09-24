@@ -68,6 +68,15 @@ The ledger is append-only for **everyone**. There is no `update` or `delete` pol
 `deposits`, and `update, delete` are additionally revoked from `authenticated`.
 Corrections are `adjustment` entries referencing the original.
 
+> **The table above is the three-role model and the implementation is the six-role
+> one.** `packages/db/src/access.ts` gives a mentor neither `deposits.view` nor
+> `deposits.record`, and `canAccessFinancials` fails closed for the whole mentor
+> side: a mentor sees the client and never the money. It also adds `FINANCE`,
+> which holds `deposits.verify` alongside an admin, so a refund or an adjustment
+> is theirs as well as an admin's. Where this table and `access.ts` disagree,
+> `access.ts` is what runs. **Open decision:** correct this table to six roles,
+> or change `access.ts`. Do not leave them disagreeing.
+
 ## 3. Students and enrollments
 
 | Action                          | Admin | Sales | Mentor |

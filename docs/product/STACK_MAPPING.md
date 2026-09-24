@@ -138,7 +138,11 @@ The order in `PRODUCT_ARCHITECTURE.md` §12, with the base taken into account.
    are not built. The business line lives on `client.vertical` from the first
    migration — see [VERTICALS.md](VERTICALS.md).
 4. **Deposits ledger.** Model, view, record and adjustment procedures, per-client
-   and global ledger screens.
+   and global ledger screens. **Built.** `Deposit`, five check constraints and
+   three triggers, including one that refuses every update and one that refuses
+   every delete. Totals are derived by aggregate, not by the view §5.5 names —
+   Prisma maps views read-only behind a preview flag, and an aggregate carries
+   the same guarantee with no stored column anywhere.
 5. **Programs and enrollments.**
 6. **Company calendar.** `CompanyEvent`, occurrence expansion, month, week, day
    and agenda views, filters, privacy between owners.

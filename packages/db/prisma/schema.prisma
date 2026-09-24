@@ -1630,6 +1630,8 @@ model StaffProfile {
   createdAt    DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
 
+  recordedDeposits   Deposit[]             @relation("DepositRecorder")
+  verifiedDeposits   Deposit[]             @relation("DepositVerifier")
   createdClients     Client[]              @relation("ClientCreator")
   salesOwnedClients  Client[]              @relation("ClientSalesOwner")
   mentorOwnedClients Client[]              @relation("ClientMentorOwner")
@@ -1684,6 +1686,7 @@ model Client {
   updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
 
   statusHistory ClientStatusHistory[]
+  deposits      Deposit[]
 
   @@unique([emailNorm], map: "client_emailNorm_active_key", where: { emailNorm: { not: null }, status: { not: "LOST" } })
   @@unique([phoneNorm], map: "client_phoneNorm_active_key", where: { phoneNorm: { not: null }, status: { not: "LOST" } })
@@ -1710,4 +1713,39 @@ model ClientStatusHistory {
   @@index([clientId, changedAt(sort: Desc)])
   @@index([changedById])
   @@map("clientStatusHistory")
+}
+
+enum DepositEntry {
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+}
+
+model Deposit {
+  id           String        @id @default(cuid())
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  entryType    DepositEntry  @default(PAYMENT)
+  amount       Decimal       @db.Decimal(14, 2)
+  currency     String        @default("AED")
+  method       String?
+  reference    String?
+  note         String?
+  correctsId   String?
+  corrects     Deposit?      @relation("DepositCorrection", fields: [correctsId], references: [id], onDelete: Restrict)
+  corrections  Deposit[]     @relation("DepositCorrection")
+  occurredAt   DateTime      @db.Timestamptz(3)
+  recordedById String
+  recordedBy   StaffProfile  @relation("DepositRecorder", fields: [recordedById], references: [userId], onDelete: Restrict)
+  verifiedById String?
+  verifiedBy   StaffProfile? @relation("DepositVerifier", fields: [verifiedById], references: [userId], onDelete: Restrict)
+  verifiedAt   DateTime?     @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([clientId, occurredAt(sort: Desc)])
+  @@index([occurredAt(sort: Desc)])
+  @@index([recordedById])
+  @@index([correctsId])
+  @@index([verifiedById])
+  @@map("deposit")
 }

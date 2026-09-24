@@ -81,3 +81,11 @@ call sites, no test that compared them.
    reach real estate.
 3. **`clientRef` across lines.** One sequence, one ref per human, whichever
    line entered them. The ref does not say which line, and it should not.
+
+---
+
+## Deposits
+
+The ledger is the same table for both lines. `deposit.clientId` carries the
+business line through `client.vertical`, so a reader who works one line never
+reaches the other's money, and no deposit row stores a line of its own.

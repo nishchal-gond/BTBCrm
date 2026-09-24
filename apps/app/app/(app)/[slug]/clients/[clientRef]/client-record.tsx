@@ -23,6 +23,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 import { ClientActions } from "./client-actions";
 import { ClientActivity } from "./client-activity";
+import { ClientDeposits } from "./client-deposits";
 import { ClientMoment } from "./client-moment";
 import { Fact, Facts } from "./facts";
 import { ClientNotFound } from "./not-found-state";
@@ -88,6 +89,7 @@ export function ClientRecord({ clientRef }: { clientRef: string }) {
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="sales">Sales</TabsTrigger>
 						<TabsTrigger value="student">Student</TabsTrigger>
+						<TabsTrigger value="deposits">Deposits</TabsTrigger>
 						<TabsTrigger value="activity">Activity</TabsTrigger>
 					</TabsList>
 
@@ -158,8 +160,16 @@ export function ClientRecord({ clientRef }: { clientRef: string }) {
 						)}
 						<Separator className="my-4" />
 						<p className="text-muted-foreground text-xs">
-							Programmes, enrolments and deposits are not built yet.
+							Programmes and enrolments are not built yet. Money is on the
+							Deposits tab.
 						</p>
+					</TabsContent>
+
+					<TabsContent value="deposits" className="pt-4">
+						<ClientDeposits
+							clientRef={row.clientRef}
+							canSeeMoney={row.canSeeMoney}
+						/>
 					</TabsContent>
 
 					<TabsContent value="activity" className="pt-4">
