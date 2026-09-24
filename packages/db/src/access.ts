@@ -1,5 +1,9 @@
 import type { Db } from "./client";
-import type { StaffRole, Vertical } from "./generated/prisma/enums";
+import type {
+	CompanyEventType,
+	StaffRole,
+	Vertical,
+} from "./generated/prisma/enums";
 
 export const VERTICALS = [
 	"ACADEMY",
@@ -39,7 +43,9 @@ export const CAPABILITIES = [
 	"clients.create",
 	"clients.edit",
 	"clients.convert",
+	"clients.reverseConversion",
 	"clients.assignMentor",
+	"clients.reassignMentor",
 	"clients.assignSalesOwner",
 	"deposits.view",
 	"deposits.record",
@@ -61,7 +67,6 @@ const MATRIX = {
 	SALES_MANAGER: new Set<Capability>([
 		"clients.create",
 		"clients.edit",
-		"clients.convert",
 		"clients.assignMentor",
 		"clients.assignSalesOwner",
 		"deposits.view",
@@ -146,7 +151,7 @@ export async function loadActor(
 	return {
 		userId,
 		role: profile.role,
-		verticals: profile.role === "ADMIN" ? VERTICALS : profile.verticals,
+		verticals: verticalsForRole(profile.role, profile.verticals),
 		teamId: profile.teamId,
 		managedTeamIds: teams.map((team) => team.id),
 		managedUserIds: [...managedUserIds],
@@ -159,8 +164,30 @@ export type OwnedRow = {
 	mentorOwnerId: string | null;
 };
 
+export function verticalsForRole(
+	role: StaffRole,
+	verticals: readonly Vertical[],
+): readonly Vertical[] {
+	return role === "ADMIN" ? VERTICALS : verticals;
+}
+
 export function verticalsOf(actor: Actor): readonly Vertical[] {
-	return actor.role === "ADMIN" ? VERTICALS : actor.verticals;
+	return verticalsForRole(actor.role, actor.verticals);
+}
+
+export function roleWorksVertical(
+	role: StaffRole,
+	verticals: readonly Vertical[],
+	vertical: Vertical,
+): boolean {
+	return verticalsForRole(role, verticals).includes(vertical);
+}
+
+export type OwnerSide = "sales" | "mentor";
+
+export function roleOwnsSide(role: StaffRole, side: OwnerSide): boolean {
+	if (role === "ADMIN") return true;
+	return side === "sales" ? isSalesSide(role) : isMentorSide(role);
 }
 
 export function canAccessVertical(actor: Actor, vertical: Vertical): boolean {
@@ -215,6 +242,37 @@ export type ClientScope = {
 		{ mentorOwnerId: { in: string[] } },
 	];
 };
+
+export const COMPANY_WIDE_EVENT_TYPES = [
+	"COMPANY_MEETING",
+	"INTERNAL_TRAINING",
+] as const satisfies readonly CompanyEventType[];
+
+export type EventScope =
+	| Record<string, never>
+	| {
+			OR: [
+				{ organizerId: { in: string[] } },
+				{ attendees: { some: { userId: string } } },
+				{ eventType: { in: CompanyEventType[] } },
+				{ client: ClientScope },
+			];
+	  };
+
+export function eventScope(actor: Actor): EventScope {
+	if (actor.role === "ADMIN") return {};
+
+	const owners = visibleOwnerIds(actor) ?? [actor.userId];
+
+	return {
+		OR: [
+			{ organizerId: { in: [...owners] } },
+			{ attendees: { some: { userId: actor.userId } } },
+			{ eventType: { in: [...COMPANY_WIDE_EVENT_TYPES] } },
+			{ client: clientScope(actor) },
+		],
+	};
+}
 
 export function clientScope(actor: Actor, vertical?: Vertical): ClientScope {
 	const allowed = vertical

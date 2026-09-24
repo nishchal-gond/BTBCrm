@@ -11,6 +11,7 @@ import {
 	capabilitiesOf,
 	isStaffRole,
 	loadActor,
+	verticalsForRole,
 } from "@crm/db/access";
 import {
 	BadRequestException,
@@ -35,6 +36,7 @@ import type {
 	CreateTeamInput,
 	SetStaffActiveInput,
 	SetStaffRoleInput,
+	SetStaffVerticalsInput,
 	StaffListInput,
 	StaffMe,
 	StaffMember,
@@ -46,6 +48,7 @@ import type {
 const PROFILE_SELECT = {
 	userId: true,
 	role: true,
+	verticals: true,
 	timezone: true,
 	phone: true,
 	isActive: true,
@@ -276,6 +279,36 @@ export class StaffService implements OnModuleInit {
 		return this.toMember(updated, actor.userId);
 	}
 
+	async setVerticals(
+		actor: Actor,
+		input: SetStaffVerticalsInput,
+	): Promise<StaffMember> {
+		requireCapability(
+			actor,
+			"users.manage",
+			"Only an administrator can change which business lines a person works in.",
+		);
+
+		const updated = await this.db.$transaction(async (tx) => {
+			const target = await this.requireProfile(tx, input.userId);
+
+			return tx.staffProfile.update({
+				where: { userId: target.userId },
+				data: { verticals: input.verticals },
+				select: PROFILE_SELECT,
+			});
+		});
+
+		this.logger.log({
+			message: "Business lines changed",
+			userId: actor.userId,
+			targetUserId: updated.userId,
+			verticals: input.verticals,
+		});
+
+		return this.toMember(updated, actor.userId);
+	}
+
 	async updateMe(actor: Actor, input: UpdateMeInput): Promise<StaffMember> {
 		const updated = await this.db.staffProfile.update({
 			where: { userId: actor.userId },
@@ -474,6 +507,7 @@ export class StaffService implements OnModuleInit {
 			email: row.user.email,
 			image: row.user.image,
 			role: row.role,
+			verticals: [...verticalsForRole(row.role, row.verticals)],
 			team: row.team,
 			timezone: row.timezone,
 			phone: row.phone,

@@ -2,9 +2,10 @@ import { type Db, Prisma, withActor } from "@crm/db";
 import {
 	type Actor,
 	can,
+	canAccessVertical,
 	canEditClient,
 	clientScope,
-	isMentorSide,
+	roleOwnsSide,
 } from "@crm/db/access";
 import { formatFils, isAmount, parseAmount } from "@crm/db/deposit-ledger";
 import {
@@ -25,7 +26,6 @@ import {
 import { InjectDatabase } from "../database/database.constants";
 import { requireCapability } from "../trpc/capabilities";
 import {
-	countsByKey,
 	type ListResult,
 	type OrderByColumns,
 	paginate,
@@ -107,7 +107,17 @@ export class ProgramsService {
 
 	constructor(@InjectDatabase() private readonly db: Db) {}
 
+	private requireAcademy(actor: Actor): void {
+		if (canAccessVertical(actor, "ACADEMY")) return;
+
+		throw new ForbiddenException(
+			"Programmes belong to the Trading Academy, and you do not work that line.",
+		);
+	}
+
 	workspace(actor: Actor) {
+		this.requireAcademy(actor);
+
 		return {
 			canManagePrograms: can(actor, "programs.manage"),
 			canManageStudents: can(actor, "students.manage"),
@@ -115,7 +125,7 @@ export class ProgramsService {
 		};
 	}
 
-	private program(row: ProgramShape, active: number): Program {
+	private program(row: ProgramShape, open: number): Program {
 		return {
 			id: row.id,
 			code: row.code,
@@ -124,7 +134,7 @@ export class ProgramsService {
 			durationWeeks: row.durationWeeks,
 			priceAed: row.priceAed.toFixed(2),
 			isActive: row.isActive,
-			activeEnrollments: active,
+			activeEnrollments: open,
 			totalEnrollments: row._count.enrollments,
 			createdAt: row.createdAt.toISOString(),
 		};
@@ -134,6 +144,8 @@ export class ProgramsService {
 		actor: Actor,
 		input: ProgramListInput,
 	): Promise<ListResult<Program>> {
+		this.requireAcademy(actor);
+
 		const and: Prisma.ProgramWhereInput[] = [];
 
 		if (input.status !== "all") {
@@ -154,7 +166,7 @@ export class ProgramsService {
 		const where: Prisma.ProgramWhereInput = { AND: and };
 		const { skip, take } = paginate(input);
 
-		const [rows, total, byStatus, activeCounts] = await Promise.all([
+		const [rows, total, byStatus] = await Promise.all([
 			this.db.program.findMany({
 				where,
 				select: PROGRAM_SELECT,
@@ -168,19 +180,20 @@ export class ProgramsService {
 				where: { AND: [] },
 				_count: { _all: true },
 			}),
-			this.db.enrollment.groupBy({
-				by: ["programId"],
-				where: { status: "ACTIVE" },
-				_count: { _all: true },
-			}),
 		]);
 
-		const active = new Map(
-			activeCounts.map((row) => [row.programId, row._count._all]),
+		const openCounts = await this.db.enrollment.groupBy({
+			by: ["programId"],
+			where: { closedAt: null, programId: { in: rows.map((row) => row.id) } },
+			_count: { _all: true },
+		});
+
+		const open = new Map(
+			openCounts.map((row) => [row.programId, row._count._all]),
 		);
 
 		return {
-			rows: rows.map((row) => this.program(row, active.get(row.id) ?? 0)),
+			rows: rows.map((row) => this.program(row, open.get(row.id) ?? 0)),
 			total,
 			facetCounts: {
 				status: Object.fromEntries(
@@ -194,6 +207,8 @@ export class ProgramsService {
 	}
 
 	async options(actor: Actor) {
+		this.requireAcademy(actor);
+
 		const rows = await this.db.program.findMany({
 			where: { isActive: true },
 			select: {
@@ -230,6 +245,7 @@ export class ProgramsService {
 			"programs.manage",
 			"Programmes are an administrator's to define.",
 		);
+		this.requireAcademy(actor);
 
 		try {
 			const created = await this.db.program.create({
@@ -298,11 +314,11 @@ export class ProgramsService {
 			select: PROGRAM_SELECT,
 		});
 
-		const active = await this.db.enrollment.count({
-			where: { programId: id, status: "ACTIVE" },
+		const open = await this.db.enrollment.count({
+			where: { programId: id, closedAt: null },
 		});
 
-		return this.program(updated, active);
+		return this.program(updated, open);
 	}
 
 	private enrollment(
@@ -393,7 +409,7 @@ export class ProgramsService {
 			throw new BadRequestException("That person has no active staff profile.");
 		}
 
-		if (profile.role !== "ADMIN" && !isMentorSide(profile.role)) {
+		if (!roleOwnsSide(profile.role, "mentor")) {
 			throw new BadRequestException("A mentor has to be on the mentor side.");
 		}
 	}
@@ -457,17 +473,14 @@ export class ProgramsService {
 					select: ENROLLMENT_SELECT,
 				});
 
-				if (client.status === "CONVERTED") {
-					await tx.client.update({
-						where: { id: client.id },
-						data: { status: "STUDENT", lastActivityAt: new Date() },
-					});
-				} else {
-					await tx.client.update({
-						where: { id: client.id },
-						data: { lastActivityAt: new Date() },
-					});
-				}
+				const becomesStudent = client.status === "CONVERTED";
+
+				await tx.client.update({
+					where: { id: client.id },
+					data: becomesStudent
+						? { status: "STUDENT", lastActivityAt: new Date() }
+						: { lastActivityAt: new Date() },
+				});
 
 				return enrollment;
 			},
@@ -569,11 +582,13 @@ export class ProgramsService {
 
 		if (input.mentorId !== null) await this.requireMentor(input.mentorId);
 
-		const updated = await this.db.enrollment.update({
-			where: { id: row.id },
-			data: { mentorId: input.mentorId },
-			select: ENROLLMENT_SELECT,
-		});
+		const updated = await withActor(this.db, { actorId: actor.userId }, (tx) =>
+			tx.enrollment.update({
+				where: { id: row.id },
+				data: { mentorId: input.mentorId },
+				select: ENROLLMENT_SELECT,
+			}),
+		);
 
 		return this.enrollment(actor, updated, new Date());
 	}

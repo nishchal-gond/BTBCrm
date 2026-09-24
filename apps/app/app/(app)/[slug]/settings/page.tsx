@@ -17,6 +17,8 @@ import { ArchiveRetention } from "./archive-retention";
 import { ResearchKey } from "./research-key";
 import { WorkspaceForm } from "./workspace-form";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "General",
 };

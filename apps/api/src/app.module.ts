@@ -21,6 +21,7 @@ import { DatabaseModule } from "./database/database.module";
 import { DealsModule } from "./deals/deals.module";
 import { DepositsModule } from "./deposits/deposits.module";
 import { EnrichmentModule } from "./enrichment/enrichment.module";
+import { EventsModule } from "./events/events.module";
 import { FieldsModule } from "./fields/fields.module";
 import { GoogleModule } from "./google/google.module";
 import { HealthModule } from "./health/health.module";
@@ -28,6 +29,7 @@ import { LoggingModule } from "./logging/logging.module";
 import { logAuthRoute } from "./logging/request-logger.middleware";
 import { MailboxModule } from "./mailbox/mailbox.module";
 import { MicrosoftModule } from "./microsoft/microsoft.module";
+import { OverviewModule } from "./overview/overview.module";
 import { ProgramsModule } from "./programs/programs.module";
 import { SavedViewsModule } from "./saved-views/saved-views.module";
 import { SearchModule } from "./search/search.module";
@@ -80,6 +82,8 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		StaffModule,
 		ClientsModule,
 		DepositsModule,
+		EventsModule,
+		OverviewModule,
 		ProgramsModule,
 		SlackModule,
 		BackfillModule,

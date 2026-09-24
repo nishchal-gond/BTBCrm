@@ -100,12 +100,6 @@ export function judgeEntry(
 	return { allowed: true };
 }
 
-export type LedgerLine = {
-	amount: string;
-	entryType: DepositEntry;
-	verifiedAt: Date | null;
-};
-
 export type LedgerTotals = {
 	total: string;
 	verified: string;
@@ -114,23 +108,30 @@ export type LedgerTotals = {
 	entryCount: number;
 };
 
-export function totalsFrom(lines: readonly LedgerLine[]): LedgerTotals {
-	let total = 0;
-	let verified = 0;
-	let paymentCount = 0;
+export type LedgerSums = {
+	total: string | null;
+	verified: string | null;
+	paymentCount: number;
+	entryCount: number;
+};
 
-	for (const line of lines) {
-		const fils = toFils(line.amount);
-		total += fils;
-		if (line.verifiedAt !== null) verified += fils;
-		if (line.entryType === "PAYMENT") paymentCount += 1;
-	}
+export const EMPTY_TOTALS: LedgerTotals = {
+	total: "0.00",
+	verified: "0.00",
+	pending: "0.00",
+	paymentCount: 0,
+	entryCount: 0,
+};
+
+export function totalsFromSums(sums: LedgerSums): LedgerTotals {
+	const total = toFils(sums.total ?? "0");
+	const verified = toFils(sums.verified ?? "0");
 
 	return {
 		total: formatFils(total),
 		verified: formatFils(verified),
 		pending: formatFils(total - verified),
-		paymentCount,
-		entryCount: lines.length,
+		paymentCount: sums.paymentCount,
+		entryCount: sums.entryCount,
 	};
 }

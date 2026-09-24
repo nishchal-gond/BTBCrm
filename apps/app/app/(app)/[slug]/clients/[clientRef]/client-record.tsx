@@ -10,6 +10,8 @@ import {
 } from "@crm/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { parseAsString, useQueryState } from "nuqs";
+import { useMemo } from "react";
 import { ClientRef } from "@/components/crm/client-ref";
 import { ClientStatusBadge } from "@/components/crm/client-status";
 import {
@@ -19,6 +21,8 @@ import {
 	PageShellHeader,
 	PageShellHeading,
 } from "@/components/page-shell";
+import { RecordFallback } from "@/components/skeletons";
+import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useTRPC } from "@/lib/trpc/client";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 import { ClientActions } from "./client-actions";
@@ -26,37 +30,61 @@ import { ClientActivity } from "./client-activity";
 import { ClientDeposits } from "./client-deposits";
 import { ClientEnrollment } from "./client-enrollment";
 import { ClientMoment } from "./client-moment";
+import { ClientSchedule } from "./client-schedule";
 import { Fact, Facts } from "./facts";
 import { ClientNotFound } from "./not-found-state";
+
+const TAB_LABELS = {
+	overview: "Overview",
+	sales: "Sales",
+	student: "Student",
+	deposits: "Deposits",
+	schedule: "Schedule",
+	activity: "Activity",
+} as const;
+
+type TabId = keyof typeof TAB_LABELS;
+
+const TAB_IDS = Object.keys(TAB_LABELS) as TabId[];
+
+function isTabId(value: string): value is TabId {
+	return (TAB_IDS as readonly string[]).includes(value);
+}
 
 export function ClientRecord({ clientRef }: { clientRef: string }) {
 	const trpc = useTRPC();
 	const workspaceUrl = useWorkspaceUrl();
+
+	const [tab, setTab] = useQueryState(
+		SEARCH_PARAM.record.tab,
+		parseAsString.withDefault(""),
+	);
 
 	const client = useQuery({
 		...trpc.clients.byRef.queryOptions({ clientRef }),
 		retry: false,
 	});
 
+	const row = client.data;
+
+	const tabs = useMemo(() => {
+		if (!row) return TAB_IDS;
+
+		return TAB_IDS.filter((id) => {
+			if (id === "student") return row.vertical === "ACADEMY";
+			if (id === "deposits") return row.canSeeMoney;
+			return true;
+		});
+	}, [row]);
+
 	if (client.isError) {
 		return <ClientNotFound backTo={workspaceUrl("/clients")} />;
 	}
 
-	const row = client.data;
-
-	if (!row) {
-		return (
-			<div
-				role="status"
-				aria-busy="true"
-				className="flex flex-1 items-center justify-center p-8 text-muted-foreground text-sm"
-			>
-				Loading {clientRef}…
-			</div>
-		);
-	}
+	if (!row) return <RecordFallback />;
 
 	const converted = row.convertedAt !== null;
+	const active = isTabId(tab) && tabs.includes(tab) ? tab : "overview";
 
 	return (
 		<PageShell className="min-h-0">
@@ -85,13 +113,18 @@ export function ClientRecord({ clientRef }: { clientRef: string }) {
 			</PageShellHeader>
 
 			<PageShellContent className="min-h-0">
-				<Tabs defaultValue="overview">
-					<TabsList>
-						<TabsTrigger value="overview">Overview</TabsTrigger>
-						<TabsTrigger value="sales">Sales</TabsTrigger>
-						<TabsTrigger value="student">Student</TabsTrigger>
-						<TabsTrigger value="deposits">Deposits</TabsTrigger>
-						<TabsTrigger value="activity">Activity</TabsTrigger>
+				<Tabs
+					value={active}
+					onValueChange={(value) =>
+						void setTab(value === "overview" ? null : value)
+					}
+				>
+					<TabsList className="max-w-full overflow-x-auto">
+						{tabs.map((id) => (
+							<TabsTrigger key={id} value={id}>
+								{TAB_LABELS[id]}
+							</TabsTrigger>
+						))}
 					</TabsList>
 
 					<TabsContent value="overview" className="pt-4">
@@ -143,19 +176,27 @@ export function ClientRecord({ clientRef }: { clientRef: string }) {
 						</p>
 					</TabsContent>
 
-					<TabsContent value="student" className="pt-4">
-						<ClientEnrollment
-							clientRef={row.clientRef}
-							clientName={row.name}
-							converted={converted}
-						/>
-					</TabsContent>
+					{tabs.includes("student") ? (
+						<TabsContent value="student" className="pt-4">
+							<ClientEnrollment
+								clientRef={row.clientRef}
+								clientName={row.name}
+								converted={converted}
+							/>
+						</TabsContent>
+					) : null}
 
-					<TabsContent value="deposits" className="pt-4">
-						<ClientDeposits
-							clientRef={row.clientRef}
-							canSeeMoney={row.canSeeMoney}
-						/>
+					{tabs.includes("deposits") ? (
+						<TabsContent value="deposits" className="pt-4">
+							<ClientDeposits
+								clientRef={row.clientRef}
+								canSeeMoney={row.canSeeMoney}
+							/>
+						</TabsContent>
+					) : null}
+
+					<TabsContent value="schedule" className="pt-4">
+						<ClientSchedule clientRef={row.clientRef} clientName={row.name} />
 					</TabsContent>
 
 					<TabsContent value="activity" className="pt-4">

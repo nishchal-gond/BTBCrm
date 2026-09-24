@@ -1,5 +1,8 @@
+"use client";
+
+import { zoneLabel } from "@crm/validation/zoned-time";
 import { LocalDateTime } from "@/components/local-date-time";
-import { COMPANY_TIME_LABEL, COMPANY_TIME_ZONE } from "@/lib/company-time";
+import { useViewerZone } from "@/lib/use-viewer-zone";
 
 const MOMENT: Intl.DateTimeFormatOptions = {
 	day: "2-digit",
@@ -8,28 +11,21 @@ const MOMENT: Intl.DateTimeFormatOptions = {
 	hour: "2-digit",
 	minute: "2-digit",
 	hour12: false,
-	timeZoneName: "short",
 };
 
 export function ClientMoment({ date }: { date: string }) {
-	return <LocalDateTime date={date} options={MOMENT} />;
-}
+	const zone = useViewerZone();
 
-const COMPANY_MOMENT: Intl.DateTimeFormatOptions = {
-	timeZone: COMPANY_TIME_ZONE,
-	day: "2-digit",
-	month: "short",
-	year: "numeric",
-	hour: "2-digit",
-	minute: "2-digit",
-	hour12: false,
-};
-
-export function CompanyMoment({ date }: { date: string }) {
 	return (
 		<>
-			<LocalDateTime date={date} options={COMPANY_MOMENT} />{" "}
-			{COMPANY_TIME_LABEL}
+			<LocalDateTime date={date} options={{ ...MOMENT, timeZone: zone }} />{" "}
+			<span className="text-muted-foreground">
+				{zoneLabel(new Date(date), zone)}
+			</span>
 		</>
 	);
+}
+
+export function CompanyMoment({ date }: { date: string }) {
+	return <ClientMoment date={date} />;
 }

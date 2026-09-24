@@ -4,7 +4,7 @@ import {
 	isAmount,
 	judgeEntry,
 	parseAmount,
-	totalsFrom,
+	totalsFromSums,
 } from "../src/deposit-ledger";
 
 function fils(input: string): number {
@@ -68,11 +68,16 @@ describe("what a ledger entry may be", () => {
 	});
 });
 
-describe("totals derived from the lines", () => {
-	const at = new Date("2026-09-01T00:00:00.000Z");
-
+describe("totals derived from database sums", () => {
 	it("is zero for an empty ledger", () => {
-		expect(totalsFrom([])).toEqual({
+		expect(
+			totalsFromSums({
+				total: null,
+				verified: null,
+				paymentCount: 0,
+				entryCount: 0,
+			}),
+		).toEqual({
 			total: "0.00",
 			verified: "0.00",
 			pending: "0.00",
@@ -83,11 +88,12 @@ describe("totals derived from the lines", () => {
 
 	it("splits verified money from money still pending", () => {
 		expect(
-			totalsFrom([
-				{ amount: "25000.00", entryType: "PAYMENT", verifiedAt: at },
-				{ amount: "5000.00", entryType: "PAYMENT", verifiedAt: null },
-				{ amount: "-1000.00", entryType: "REFUND", verifiedAt: at },
-			]),
+			totalsFromSums({
+				total: "29000.00",
+				verified: "24000.00",
+				paymentCount: 2,
+				entryCount: 3,
+			}),
 		).toEqual({
 			total: "29000.00",
 			verified: "24000.00",
@@ -99,22 +105,42 @@ describe("totals derived from the lines", () => {
 
 	it("lets an adjustment pull a total back down", () => {
 		expect(
-			totalsFrom([
-				{ amount: "1000.00", entryType: "PAYMENT", verifiedAt: null },
-				{ amount: "-250.50", entryType: "ADJUSTMENT", verifiedAt: null },
-			]).total,
+			totalsFromSums({
+				total: "749.50",
+				verified: null,
+				paymentCount: 1,
+				entryCount: 2,
+			}).total,
 		).toBe("749.50");
 	});
 
-	it("counts payments, not every entry", () => {
-		const totals = totalsFrom([
-			{ amount: "10.00", entryType: "PAYMENT", verifiedAt: null },
-			{ amount: "-10.00", entryType: "REFUND", verifiedAt: null },
-			{ amount: "1.00", entryType: "ADJUSTMENT", verifiedAt: null },
-		]);
+	it("reports pending as the whole total when nothing is verified", () => {
+		const totals = totalsFromSums({
+			total: "1.00",
+			verified: null,
+			paymentCount: 1,
+			entryCount: 3,
+		});
 
+		expect(totals.pending).toBe("1.00");
 		expect(totals.paymentCount).toBe(1);
 		expect(totals.entryCount).toBe(3);
-		expect(totals.total).toBe("1.00");
+	});
+
+	it("keeps a refund negative when it outweighs the payments", () => {
+		expect(
+			totalsFromSums({
+				total: "-250.50",
+				verified: "-250.50",
+				paymentCount: 0,
+				entryCount: 1,
+			}),
+		).toEqual({
+			total: "-250.50",
+			verified: "-250.50",
+			pending: "0.00",
+			paymentCount: 0,
+			entryCount: 1,
+		});
 	});
 });

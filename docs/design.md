@@ -30,14 +30,19 @@ Four groups, and nothing else:
   a step up this ramp plus a 1px border. Only a floating overlay carries a
   shadow.
 - **Borders** — `border-subtle` for row dividers, `border-border` for panel and
-  input edges, `border-strong` for a focused or emphasised boundary.
+  card edges, `border-input` for the edge that identifies a control,
+  `border-strong` for a hovered or emphasised control. The first two are
+  decoration and stay quiet. The last two are measured at 3:1 on every surface.
 - **Foreground** — `text-fg-primary` · `text-fg-secondary` · `text-fg-tertiary`
   · `text-fg-disabled`. `--fg-tertiary` is the contrast floor for text a user
   must read.
 - **Accent and semantics** — one gold accent (`bg-accent`, `text-accent`,
   `ring-accent`) for the active rule, the primary action and the focus ring;
   `positive` · `negative` · `warning` · `info` for data only, each with a
-  `-muted` fill and a `-border`.
+  `-muted` fill, a `-border`, and an `-on-muted` text colour for use on that
+  fill. Hover and active fills come from `-hover` and `-press` tokens. Never
+  re-derive a state with `color-mix` at the call site: a darkened accent falls
+  below 4.5:1 against its own foreground.
 
 **Only two things are filled**: the accent for the action you want, and
 `destructive` for the one you cannot undo. Everything else — secondary, outline,

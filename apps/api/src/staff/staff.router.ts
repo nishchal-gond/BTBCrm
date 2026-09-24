@@ -20,6 +20,7 @@ import {
 	createTeamInput,
 	setStaffActiveInput,
 	setStaffRoleInput,
+	setStaffVerticalsInput,
 	staffListInput,
 	staffListOutput,
 	staffMemberOutput,
@@ -116,6 +117,19 @@ export class StaffRouter {
 	@UseMiddlewares(ActorMiddleware)
 	async teams() {
 		return this.staff.teams();
+	}
+
+	@Mutation({
+		input: setStaffVerticalsInput,
+		output: staffMemberOutput,
+		meta: restMeta("PATCH", "/staff/{userId}/verticals", ["Staff"]),
+	})
+	@UseMiddlewares(ActorMiddleware)
+	async setVerticals(
+		@Ctx() ctx: ActorTrpcContext,
+		@Input() input: z.infer<typeof setStaffVerticalsInput>,
+	) {
+		return this.staff.setVerticals(ctx.actor, input);
 	}
 
 	@Mutation({

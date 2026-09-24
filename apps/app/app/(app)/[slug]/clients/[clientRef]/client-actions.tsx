@@ -103,7 +103,7 @@ function AssignMentorDialog({ client }: { client: Client }) {
 		}),
 	);
 
-	if (client.vertical !== "ACADEMY") return null;
+	if (!client.canAssignMentor) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -267,29 +267,37 @@ function ConvertDialog({ client }: { client: Client }) {
 		trpc.clients.convert.mutationOptions({
 			onSuccess: async (updated) => {
 				await refresh();
-				toast.success(`${updated.clientRef} converted.`);
+				toast.success(
+					`${updated.clientRef} is ${updated.status === "CONVERTED" ? "converted" : updated.status.toLowerCase()}.`,
+				);
 				setOpen(false);
 			},
 			onError: (error) => toast.error(error.message),
 		}),
 	);
 
-	if (client.convertedAt !== null) return null;
+	if (!client.canConvert) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="sm">Convert</Button>
+				<Button size="sm">
+					{client.reconverting ? "Convert again" : "Convert"}
+				</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Convert {client.name}</DialogTitle>
+					<DialogTitle>
+						{client.reconverting ? "Convert again" : "Convert"} {client.name}
+					</DialogTitle>
 					<DialogDescription>
-						This sets the status to Converted, records{" "}
-						{client.mentorOwner
-							? `${client.mentorOwner.name} as the mentor`
-							: "the mentor"}
-						, and stamps who closed it and when.
+						{client.reconverting
+							? "This client converted once already and was walked back. Converting again moves the status forward and leaves the original stamp alone."
+							: `This sets the status to Converted, records ${
+									client.mentorOwner
+										? `${client.mentorOwner.name} as the mentor`
+										: "the mentor"
+								}, and stamps who closed it and when.`}
 					</DialogDescription>
 				</DialogHeader>
 

@@ -24,6 +24,35 @@ run needs `db:migrate` only for the seed that follows it. When the database and
 they do not match — reconcile with `db:migrate`, or `db:reset` when the divergence
 is an edited migration that has already been applied.
 
+### What the seed gives you
+
+`db:seed` builds the whole Trading Academy, not just the base product. Eight staff
+profiles at `@tradingacademy.ae` — one of each role, plus a real-estate-only
+salesperson so the business-line boundary has something to prove itself against —
+four programmes, thirty-five clients spread across every status, deposits against
+the converted ones, and a schedule with past and future bookings. The admin is the
+workspace owner, so Settings is reachable.
+
+It also completes onboarding the supported way: it writes a real website and stamps
+`onboardedAt` through `markOnboarded`, the same helper `workspace.update` uses. It
+does **not** write a research key. Nothing in this repository should ever write one:
+the gate is deferrable, and a fake key turns the research capabilities *on* and makes
+every brand lookup fail at the vendor instead of settling `SKIPPED`. See
+`docs/environment.md`.
+
+### Signing in without Google
+
+```sh
+bun run --filter=api dev:session admin@tradingacademy.ae
+```
+
+It prints a signed cookie, mints the session, and enrols the user in the workspace
+through `ensureWorkspaceMembership` — the same path sign-in takes. Paste the cookie
+into the browser for `localhost`. It refuses to run under `NODE_ENV=production`.
+
+Pass any seeded address to become that person: `sales-a@`, `mentor-a@`, `finance@`,
+`estate@` and so on. That is how the permission suite runs as eight different people.
+
 ## Google Cloud
 
 - **Enable the Gmail API and the Google Calendar API** on the project.

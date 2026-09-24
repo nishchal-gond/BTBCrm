@@ -19,6 +19,7 @@ import { Skeleton } from "@crm/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
+import { BusinessLineSwitcher } from "@/components/crm/business-line-switcher";
 import { EnrichmentQueue } from "@/components/enrichment-queue";
 import { useMobileNav } from "@/components/mobile-nav";
 import { signOutAndRedirect } from "@/lib/sign-out";
@@ -55,10 +56,16 @@ export function AppHeader({ user }: { user: User }) {
 					<Logo className="size-5" />
 				</Link>
 				<Separator orientation="vertical" className="mx-1 h-5 bg-transparent" />
-				<span className="min-w-0 truncate font-medium text-sm">{label}</span>
+				<span className="hidden min-w-0 truncate font-medium text-sm sm:inline">
+					{label}
+				</span>
 			</div>
 
-			<div className="ml-auto flex shrink-0 items-center gap-1.5">
+			<div className="min-w-0 flex-1">
+				<BusinessLineSwitcher />
+			</div>
+
+			<div className="flex shrink-0 items-center gap-1.5">
 				<EnrichmentQueue />
 				<UserMenu
 					user={user}

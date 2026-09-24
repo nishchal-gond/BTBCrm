@@ -7,6 +7,8 @@ import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { ConnectionPage } from "../../connection-page";
 import { SlackPeopleMatches } from "./slack-people-matches";
 
+export const instant = false;
+
 type SlackPeoplePageProps = {
 	params: Promise<{ slug: string }>;
 };

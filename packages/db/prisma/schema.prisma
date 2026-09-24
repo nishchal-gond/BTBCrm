@@ -1306,6 +1306,8 @@ model AppSetting {
 
   contextDevApiKey String?
 
+  contextDevDeferredAt DateTime? @db.Timestamptz(3)
+
   reportingCurrency String?
 
   ratesRefreshedAt DateTime?
@@ -1639,6 +1641,9 @@ model StaffProfile {
   mentorOwnedClients  Client[]              @relation("ClientMentorOwner")
   convertedClients    Client[]              @relation("ClientConverter")
   clientStatusEdits   ClientStatusHistory[] @relation("ClientStatusChanger")
+  organizedEvents     CompanyEvent[]        @relation("EventOrganizer")
+  createdEvents       CompanyEvent[]        @relation("EventCreator")
+  eventInvitations    CompanyEventAttendee[]
 
   @@index([role, isActive])
   @@index([teamId])
@@ -1690,6 +1695,7 @@ model Client {
   statusHistory ClientStatusHistory[]
   deposits      Deposit[]
   enrollments   Enrollment[]
+  events        CompanyEvent[]
 
   @@unique([emailNorm], map: "client_emailNorm_active_key", where: { emailNorm: { not: null }, status: { not: "LOST" } })
   @@unique([phoneNorm], map: "client_phoneNorm_active_key", where: { phoneNorm: { not: null }, status: { not: "LOST" } })
@@ -1800,4 +1806,65 @@ model Enrollment {
   @@index([programId])
   @@index([createdById])
   @@map("enrollment")
+}
+
+enum CompanyEventType {
+  SALES_CALL
+  CLIENT_APPOINTMENT
+  MENTOR_SESSION
+  REVIEW
+  ONBOARDING
+  COMPANY_MEETING
+  INTERNAL_TRAINING
+  OTHER
+}
+
+enum EventResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+model CompanyEvent {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  eventType   CompanyEventType
+  startsAt    DateTime         @db.Timestamptz(3)
+  endsAt      DateTime         @db.Timestamptz(3)
+  timezone    String           @default("Asia/Dubai")
+  isAllDay    Boolean          @default(false)
+  location    String?
+  organizerId String
+  organizer   StaffProfile     @relation("EventOrganizer", fields: [organizerId], references: [userId], onDelete: Restrict)
+  clientId    String?
+  client      Client?          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  isCancelled Boolean          @default(false)
+  cancelledAt DateTime?        @db.Timestamptz(3)
+  createdById String
+  createdBy   StaffProfile     @relation("EventCreator", fields: [createdById], references: [userId], onDelete: Restrict)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+
+  attendees CompanyEventAttendee[]
+
+  @@index([startsAt, endsAt])
+  @@index([organizerId, startsAt])
+  @@index([clientId, startsAt], where: { clientId: { not: null } })
+  @@index([createdById])
+  @@map("companyEvent")
+}
+
+model CompanyEventAttendee {
+  eventId     String
+  event       CompanyEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        StaffProfile  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  response    EventResponse @default(PENDING)
+  respondedAt DateTime?     @db.Timestamptz(3)
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@map("companyEventAttendee")
 }

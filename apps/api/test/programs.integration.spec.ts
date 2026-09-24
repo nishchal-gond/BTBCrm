@@ -3,6 +3,7 @@ import { db } from "@crm/db";
 import { type Actor, loadActor } from "@crm/db/access";
 import { ClientsService } from "../src/clients/clients.service";
 import { ProgramsService } from "../src/programs/programs.service";
+import { withoutDeleteGuards } from "./guards";
 
 const suffix = process.env.TEST_RUN_ID ?? "programs-spec";
 
@@ -33,9 +34,11 @@ async function cleanUp(): Promise<void> {
 	});
 	const clientIds = mine.map((row) => row.id);
 
-	await db.enrollment.deleteMany({ where: { clientId: { in: clientIds } } });
-	await db.program.deleteMany({ where: { code: { startsWith: "T-" } } });
-	await db.client.deleteMany({ where: { id: { in: clientIds } } });
+	await withoutDeleteGuards(async () => {
+		await db.enrollment.deleteMany({ where: { clientId: { in: clientIds } } });
+		await db.program.deleteMany({ where: { code: { startsWith: "T-" } } });
+		await db.client.deleteMany({ where: { id: { in: clientIds } } });
+	});
 	await db.staffProfile.deleteMany({ where: { userId: { in: staffIds } } });
 	await db.user.deleteMany({ where: { id: { in: staffIds } } });
 }
@@ -328,6 +331,23 @@ describe("a student has an active enrolment", () => {
 					reason: null,
 				}),
 			),
+		).toMatch(/becomes a student by enrolling/);
+	});
+
+	it("refuses the same move at the database, with no API in the way", async () => {
+		const clientRef = await converted();
+		const row = await db.client.findFirstOrThrow({
+			where: { clientRef },
+			select: { id: true },
+		});
+
+		expect(
+			await refused(() =>
+				db.client.update({
+					where: { id: row.id },
+					data: { status: "STUDENT" },
+				}),
+			),
 		).toMatch(/enrol them on a programme first/);
 	});
 
@@ -539,6 +559,91 @@ describe("one enrolment at a time, paused or not", () => {
 		expect(
 			(await programs.forClient(actors.mentorA, clientRef)).canEnroll,
 		).toBe(true);
+	});
+});
+
+describe("the database holds the same rules", () => {
+	it("refuses an enrolment for a client who has not converted", async () => {
+		const lead = await clients.create(actors.salesA, {
+			vertical: "ACADEMY",
+			firstName: "Early",
+			lastName: unique(),
+			email: `early.${unique().toLowerCase()}@student.example`,
+			phone: null,
+			country: null,
+			city: null,
+			source: null,
+			salesOwnerId: null,
+		});
+
+		expect(
+			await refused(() =>
+				db.enrollment.create({
+					data: {
+						clientId: lead.id,
+						programId,
+						createdById: ids.admin,
+					},
+				}),
+			),
+		).toMatch(/enrols once they convert/);
+	});
+
+	it("refuses to delete an enrolment", async () => {
+		const clientRef = await converted();
+		const enrolled = await programs.enroll(actors.mentorA, {
+			clientRef,
+			programId,
+			mentorId: null,
+			cohort: null,
+			notes: null,
+		});
+
+		expect(
+			await refused(() => db.enrollment.delete({ where: { id: enrolled.id } })),
+		).toMatch(/withdrawn, never deleted/);
+	});
+
+	it("refuses to move an enrolment onto a different programme", async () => {
+		const other = await programs.create(actors.admin, {
+			code: `T-${unique()}`,
+			name: "Other",
+			description: null,
+			durationWeeks: 6,
+			priceAed: "100",
+		});
+
+		const clientRef = await converted();
+		const enrolled = await programs.enroll(actors.mentorA, {
+			clientRef,
+			programId,
+			mentorId: null,
+			cohort: null,
+			notes: null,
+		});
+
+		expect(
+			await refused(() =>
+				db.enrollment.update({
+					where: { id: enrolled.id },
+					data: { programId: other.id },
+				}),
+			),
+		).toMatch(/stays on the programme/);
+	});
+
+	it("refuses to delete a programme", async () => {
+		const doomed = await programs.create(actors.admin, {
+			code: `T-${unique()}`,
+			name: "Doomed",
+			description: null,
+			durationWeeks: 2,
+			priceAed: "10",
+		});
+
+		expect(
+			await refused(() => db.program.delete({ where: { id: doomed.id } })),
+		).toMatch(/retired, never deleted/);
 	});
 });
 

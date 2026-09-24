@@ -12,6 +12,7 @@
 		"./blob": "./src/blob.ts",
 		"./client": "./src/client.ts",
 		"./client-lifecycle": "./src/client-lifecycle.ts",
+		"./company-events": "./src/company-events.ts",
 		"./crm-events": "./src/crm-events.ts",
 		"./currency": "./src/currency.ts",
 		"./deal-stage": "./src/deal-stage.ts",

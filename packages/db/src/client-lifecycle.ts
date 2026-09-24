@@ -48,6 +48,14 @@ const POST_CONVERSION: ReadonlySet<ClientStatus> = new Set([
 	"STUDENT",
 ]);
 
+export function isConverted(status: ClientStatus): boolean {
+	return POST_CONVERSION.has(status);
+}
+
+export function isPreConversion(status: ClientStatus): boolean {
+	return PRE_CONVERSION.has(status);
+}
+
 export function viewsForVertical(vertical: Vertical): readonly ClientView[] {
 	return vertical === "ACADEMY" ? CLIENT_VIEWS : ["leads", "clients"];
 }

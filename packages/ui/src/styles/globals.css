@@ -16,35 +16,38 @@
 
 	--border-subtle: #1e252c;
 	--border-default: #2a333c;
-	--border-strong: #3a4550;
+	--border-control: #646f7a;
+	--border-strong: #78838e;
 
 	--fg-primary: #e8edf2;
 	--fg-secondary: #98a4b0;
-	--fg-tertiary: #6b7885;
+	--fg-tertiary: #7e8b98;
 	--fg-disabled: #4a555f;
 
 	--accent: #c9a227;
 	--accent-hover: #ddb53a;
 	--accent-press: #b08e1f;
 	--accent-muted: rgb(201 162 39 / 0.12);
-	--accent-border: rgb(201 162 39 / 0.35);
+	--accent-border: rgb(201 162 39 / 0.55);
 	--accent-fg: #0a0c0f;
 
 	--positive: #3fb68b;
 	--positive-muted: rgb(63 182 139 / 0.12);
-	--positive-border: rgb(63 182 139 / 0.35);
+	--positive-border: rgb(63 182 139 / 0.55);
 	--positive-on-muted: #3fb68b;
-	--negative: #e0574f;
-	--negative-muted: rgb(224 87 79 / 0.12);
-	--negative-border: rgb(224 87 79 / 0.35);
+	--negative: #e2635b;
+	--negative-hover: #ea7a73;
+	--negative-press: #d1544d;
+	--negative-muted: rgb(226 99 91 / 0.12);
+	--negative-border: rgb(226 99 91 / 0.55);
 	--negative-on-muted: #e87a74;
 	--warning: #e0a23f;
 	--warning-muted: rgb(224 162 63 / 0.12);
-	--warning-border: rgb(224 162 63 / 0.35);
+	--warning-border: rgb(224 162 63 / 0.55);
 	--warning-on-muted: #e0a23f;
 	--info: #4a90c4;
 	--info-muted: rgb(74 144 196 / 0.12);
-	--info-border: rgb(74 144 196 / 0.35);
+	--info-border: rgb(74 144 196 / 0.55);
 	--info-on-muted: #63a2cf;
 
 	--dur-fast: 120ms;
@@ -85,7 +88,7 @@
 	--warning-foreground: var(--surface-canvas);
 	--info-foreground: var(--surface-canvas);
 	--border: var(--border-default);
-	--input: var(--border-default);
+	--input: var(--border-control);
 	--overlay: rgb(10 12 15 / 0.72);
 	--ring: var(--accent);
 
@@ -160,6 +163,7 @@
 
 	--color-subtle: var(--border-subtle);
 	--color-default: var(--border-default);
+	--color-control: var(--border-control);
 	--color-strong: var(--border-strong);
 
 	--color-fg-primary: var(--fg-primary);
@@ -180,6 +184,8 @@
 	--color-positive-border: var(--positive-border);
 	--color-positive-on-muted: var(--positive-on-muted);
 	--color-negative: var(--negative);
+	--color-negative-hover: var(--negative-hover);
+	--color-negative-press: var(--negative-press);
 	--color-negative-muted: var(--negative-muted);
 	--color-negative-border: var(--negative-border);
 	--color-negative-on-muted: var(--negative-on-muted);
@@ -999,26 +1005,33 @@
 }
 
 @media (pointer: coarse) {
+	button,
+	summary,
+	select,
+	textarea,
+	input:not([type="hidden"]),
+	[role="button"],
+	[role="tab"],
+	[role="switch"],
+	[role="checkbox"],
+	[role="radio"],
+	[role="option"],
+	[role="menuitem"],
+	[role="menuitemradio"],
+	[role="menuitemcheckbox"],
 	[data-slot="button"],
-	[data-slot="tabs-trigger"],
-	[data-slot="select-trigger"],
-	[data-slot="input"],
-	[data-slot="input-group-control"],
-	[data-slot="dropdown-menu-trigger"],
-	[data-slot="dialog-trigger"],
-	[data-slot="alert-dialog-trigger"],
-	[data-slot="sheet-trigger"],
-	[data-slot="popover-trigger"],
 	[data-slot="client-ref"],
-	[data-slot="client-link"],
-	[data-slot="sheet-close"],
-	[data-slot="dialog-close"],
-	[data-slot="alert-dialog-close"] {
+	[data-slot="client-link"] {
 		min-height: 44px;
 	}
 
-	[data-slot="sheet-content"] > [data-slot="sheet-close"],
-	[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+	button,
+	[role="button"],
+	[role="tab"],
+	[role="switch"],
+	[role="checkbox"],
+	[role="radio"],
+	[data-slot="button"] {
 		min-width: 44px;
 	}
 

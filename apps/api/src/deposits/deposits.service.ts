@@ -10,13 +10,14 @@ import {
 } from "@crm/db/access";
 import {
 	DEPOSIT_ENTRIES,
+	EMPTY_TOTALS,
 	formatFils,
 	isAmount,
 	judgeEntry,
 	LEDGER_CURRENCY,
 	type LedgerTotals,
 	parseAmount,
-	totalsFrom,
+	totalsFromSums,
 } from "@crm/db/deposit-ledger";
 import type { DepositEntry, Vertical } from "@crm/db/enums";
 import {
@@ -80,14 +81,6 @@ const NOT_FOUND = "No such entry, or it is not yours to see.";
 
 const FUTURE_TOLERANCE_MS = 60_000;
 
-const EMPTY_TOTALS: LedgerTotals = {
-	total: "0.00",
-	verified: "0.00",
-	pending: "0.00",
-	paymentCount: 0,
-	entryCount: 0,
-};
-
 function person(value: { userId: string; user: { name: string } } | null) {
 	return value ? { userId: value.userId, name: value.user.name } : null;
 }
@@ -99,6 +92,8 @@ export class DepositsService {
 	constructor(@InjectDatabase() private readonly db: Db) {}
 
 	workspace(actor: Actor) {
+		this.requireLedgerAccess(actor);
+
 		return {
 			currency: LEDGER_CURRENCY,
 			entryTypes: this.entryTypesFor(actor),
@@ -201,31 +196,37 @@ export class DepositsService {
 	private async totalsFor(
 		where: Prisma.DepositWhereInput,
 	): Promise<LedgerTotals & { lastDepositAt: string | null }> {
-		const lines = await this.db.deposit.findMany({
-			where,
-			select: {
-				amount: true,
-				entryType: true,
-				verifiedAt: true,
-				occurredAt: true,
-			},
-			orderBy: { occurredAt: "desc" },
-		});
+		const [all, verified, paymentCount] = await Promise.all([
+			this.db.deposit.aggregate({
+				where,
+				_sum: { amount: true },
+				_count: { _all: true },
+				_max: { occurredAt: true },
+			}),
+			this.db.deposit.aggregate({
+				where: { AND: [where, { verifiedAt: { not: null } }] },
+				_sum: { amount: true },
+			}),
+			this.db.deposit.count({
+				where: { AND: [where, { entryType: "PAYMENT" }] },
+			}),
+		]);
+
+		const entryCount = all._count._all;
 
 		const totals =
-			lines.length === 0
+			entryCount === 0
 				? EMPTY_TOTALS
-				: totalsFrom(
-						lines.map((line) => ({
-							amount: line.amount.toFixed(2),
-							entryType: line.entryType,
-							verifiedAt: line.verifiedAt,
-						})),
-					);
+				: totalsFromSums({
+						total: all._sum.amount?.toFixed(2) ?? null,
+						verified: verified._sum.amount?.toFixed(2) ?? null,
+						paymentCount,
+						entryCount,
+					});
 
 		return {
 			...totals,
-			lastDepositAt: lines[0]?.occurredAt.toISOString() ?? null,
+			lastDepositAt: all._max.occurredAt?.toISOString() ?? null,
 		};
 	}
 
@@ -375,28 +376,34 @@ export class DepositsService {
 			}
 		}
 
-		const created = await withActor(this.db, { actorId: actor.userId }, (tx) =>
-			tx.deposit.create({
-				data: {
-					clientId: client.id,
-					entryType: input.entryType,
-					amount: new Prisma.Decimal(formatFils(parsed.fils)),
-					currency: LEDGER_CURRENCY,
-					method: input.method,
-					reference: input.reference,
-					note: input.note,
-					correctsId: input.correctsId,
-					occurredAt,
-					recordedById: actor.userId,
-				},
-				select: ROW_SELECT,
-			}),
-		);
+		const created = await withActor(
+			this.db,
+			{ actorId: actor.userId },
+			async (tx) => {
+				const entry = await tx.deposit.create({
+					data: {
+						clientId: client.id,
+						entryType: input.entryType,
+						amount: new Prisma.Decimal(formatFils(parsed.fils)),
+						currency: LEDGER_CURRENCY,
+						method: input.method,
+						reference: input.reference,
+						note: input.note,
+						correctsId: input.correctsId,
+						occurredAt,
+						recordedById: actor.userId,
+					},
+					select: ROW_SELECT,
+				});
 
-		await this.db.client.update({
-			where: { id: client.id },
-			data: { lastActivityAt: new Date() },
-		});
+				await tx.client.update({
+					where: { id: client.id },
+					data: { lastActivityAt: new Date() },
+				});
+
+				return entry;
+			},
+		);
 
 		this.logger.log({
 			message: "Deposit recorded",
@@ -414,22 +421,28 @@ export class DepositsService {
 			"Verifying money is for an administrator or finance.",
 		);
 
-		const existing = await this.db.deposit.findFirst({
-			where: { id, ...this.scope(actor) },
-			select: { id: true, verifiedAt: true },
-		});
+		const verified = await withActor(
+			this.db,
+			{ actorId: actor.userId },
+			async (tx) => {
+				const existing = await tx.deposit.findFirst({
+					where: { id, ...this.scope(actor) },
+					select: { id: true, verifiedAt: true },
+				});
 
-		if (!existing) throw new NotFoundException(NOT_FOUND);
+				if (!existing) throw new NotFoundException(NOT_FOUND);
 
-		if (existing.verifiedAt !== null) {
-			throw new ConflictException("That entry is verified already.");
-		}
+				if (existing.verifiedAt !== null) {
+					throw new ConflictException("That entry is verified already.");
+				}
 
-		const verified = await this.db.deposit.update({
-			where: { id },
-			data: { verifiedById: actor.userId, verifiedAt: new Date() },
-			select: ROW_SELECT,
-		});
+				return tx.deposit.update({
+					where: { id },
+					data: { verifiedById: actor.userId, verifiedAt: new Date() },
+					select: ROW_SELECT,
+				});
+			},
+		);
 
 		return this.row(actor, verified);
 	}

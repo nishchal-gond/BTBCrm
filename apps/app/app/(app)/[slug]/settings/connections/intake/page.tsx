@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { requireSession } from "@/lib/session";
 import { ConnectionPage, ConnectionPageLoading } from "../connection-page";
 
+export const instant = false;
+
 export default function IntakeConnectionPage(
 	props: PageProps<"/[slug]/settings/connections/intake">,
 ) {

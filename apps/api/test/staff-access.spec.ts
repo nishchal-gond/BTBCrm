@@ -251,6 +251,7 @@ describe("StaffService guards", () => {
 		userId: string;
 		role: StaffRole;
 		isActive: boolean;
+		verticals?: Vertical[];
 	};
 
 	type FakeWrite = Partial<Pick<FakeProfile, "role" | "isActive">>;
@@ -260,6 +261,7 @@ describe("StaffService guards", () => {
 
 		const row = (profile: FakeProfile) => ({
 			...profile,
+			verticals: profile.verticals ?? (["ACADEMY"] as Vertical[]),
 			timezone: "Asia/Dubai",
 			phone: null,
 			createdAt: new Date("2026-09-01T00:00:00Z"),

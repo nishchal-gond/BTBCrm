@@ -25,6 +25,7 @@ import { LocalRelativeTime } from "@/components/local-date-time";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
+import { useBusinessLine } from "@/lib/use-business-line";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 import { DepositsEmpty, describeLedgerFilters } from "./deposits-empty";
 import { depositsSearchParams } from "./deposits-search-params";
@@ -210,8 +211,11 @@ export function DepositsTable() {
 		parseAsString.withDefault(""),
 	);
 
-	const workspace = useQuery(trpc.clients.workspace.queryOptions());
-	const vertical = workspace.data?.verticals[0] ?? "ACADEMY";
+	const [wanted] = useBusinessLine();
+	const workspace = useQuery(
+		trpc.clients.workspace.queryOptions({ vertical: wanted }),
+	);
+	const vertical = workspace.data?.vertical ?? wanted;
 
 	const listInput = useMemo(
 		() => ({

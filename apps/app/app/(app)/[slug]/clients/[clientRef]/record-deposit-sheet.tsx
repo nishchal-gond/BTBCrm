@@ -29,12 +29,9 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { depositEntryLabel } from "@/components/crm/deposit-entry";
 import { formatLedgerAmount } from "@/components/crm/money";
-import {
-	COMPANY_TIME_ZONE,
-	instantForCompanyDay,
-	todayInCompanyZone,
-} from "@/lib/company-time";
+import { instantForDay, todayInZone } from "@/lib/company-time";
 import { useTRPC } from "@/lib/trpc/client";
+import { useViewerZone } from "@/lib/use-viewer-zone";
 
 const METHODS = ["Bank transfer", "Card", "Cash", "Cheque"] as const;
 
@@ -49,7 +46,8 @@ export function RecordDepositSheet({ clientRef }: { clientRef: string }) {
 	const [reference, setReference] = useState("");
 	const [note, setNote] = useState("");
 	const [correctsId, setCorrectsId] = useState("");
-	const [occurredOn, setOccurredOn] = useState(todayInCompanyZone());
+	const zone = useViewerZone();
+	const [occurredOn, setOccurredOn] = useState(todayInZone(zone));
 
 	const amountId = useId();
 	const referenceId = useId();
@@ -143,7 +141,7 @@ export function RecordDepositSheet({ clientRef }: { clientRef: string }) {
 							reference: reference.trim() === "" ? null : reference.trim(),
 							note: note.trim() === "" ? null : note.trim(),
 							correctsId: corrects && correctsId !== "" ? correctsId : null,
-							occurredAt: instantForCompanyDay(occurredOn),
+							occurredAt: instantForDay(occurredOn, zone),
 						});
 					}}
 				>
@@ -249,13 +247,13 @@ export function RecordDepositSheet({ clientRef }: { clientRef: string }) {
 								id={dateId}
 								type="date"
 								value={occurredOn}
-								max={todayInCompanyZone()}
+								max={todayInZone(zone)}
 								onChange={(event) => setOccurredOn(event.target.value)}
 								className="font-mono tabular-nums"
 								required
 							/>
 							<p className="text-muted-foreground text-xs">
-								The day it was received, in {COMPANY_TIME_ZONE}.
+								The day it was received, in {zone}.
 							</p>
 						</Field>
 

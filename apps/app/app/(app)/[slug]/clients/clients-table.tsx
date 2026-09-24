@@ -23,6 +23,7 @@ import { LocalRelativeTime } from "@/components/local-date-time";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
+import { useBusinessLine } from "@/lib/use-business-line";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 import { ClientsEmpty, describeFilters } from "./clients-empty";
 import {
@@ -54,7 +55,7 @@ function ClientCard({ row }: { row: ClientRow }) {
 
 	return (
 		<div className="flex flex-col gap-2 px-4 py-3">
-			<div className="flex items-start justify-between gap-3">
+			<div className="flex items-center justify-between gap-3">
 				<Link
 					data-slot="client-link"
 					href={workspaceUrl(`/clients/${row.clientRef}`)}
@@ -174,8 +175,11 @@ export function ClientsTable({ view }: { view: ClientView }) {
 		parseAsString.withDefault(""),
 	);
 
-	const workspace = useQuery(trpc.clients.workspace.queryOptions());
-	const vertical = workspace.data?.verticals[0] ?? "ACADEMY";
+	const [wanted] = useBusinessLine();
+	const workspace = useQuery(
+		trpc.clients.workspace.queryOptions({ vertical: wanted }),
+	);
+	const vertical = workspace.data?.vertical ?? wanted;
 
 	const listInput = useMemo(
 		() => ({
@@ -215,35 +219,35 @@ export function ClientsTable({ view }: { view: ClientView }) {
 
 	const people = staff.data?.rows ?? [];
 
-	const ownerOptions = (facet: "salesOwner" | "mentorOwner") =>
-		[
-			{ value: "unassigned", label: "Unassigned" },
-			...people.map((person) => ({
-				value: person.userId,
-				label: person.name,
-			})),
-		].filter((option) => (facetCounts?.[facet]?.[option.value] ?? 0) > 0);
+	const ownerOptions = (side: "SALES" | "MENTOR") => [
+		{ value: "unassigned", label: "Unassigned" },
+		...people
+			.filter((person) =>
+				side === "SALES"
+					? person.role === "SALES" || person.role === "SALES_MANAGER"
+					: person.role === "MENTOR" || person.role === "MENTOR_MANAGER",
+			)
+			.map((person) => ({ value: person.userId, label: person.name })),
+	];
 
 	const facets: DataTableFacet[] = [
 		{
 			id: "status",
 			label: "Status",
-			options: (workspace.data?.statuses ?? [])
-				.map((status) => ({
-					value: status,
-					label: clientStatusLabel(status),
-				}))
-				.filter((option) => (facetCounts?.status?.[option.value] ?? 0) > 0),
+			options: (workspace.data?.statuses ?? []).map((status) => ({
+				value: status,
+				label: clientStatusLabel(status),
+			})),
 		},
 		{
 			id: "salesOwner",
 			label: "Sales owner",
-			options: ownerOptions("salesOwner"),
+			options: ownerOptions("SALES"),
 		},
 		{
 			id: "mentorOwner",
 			label: "Mentor",
-			options: ownerOptions("mentorOwner"),
+			options: ownerOptions("MENTOR"),
 		},
 	];
 
@@ -251,13 +255,18 @@ export function ClientsTable({ view }: { view: ClientView }) {
 		<DataTable
 			query={query}
 			search={<ListSearch placeholder="Search by name, client ID or email…" />}
-			actions={<CreateClientSheet vertical={vertical} />}
+			actions={
+				workspace.data?.canCreate ? (
+					<CreateClientSheet vertical={vertical} />
+				) : null
+			}
 			columns={COLUMNS}
 			rows={rows}
 			total={clients.data?.total ?? 0}
 			facetCounts={facetCounts}
 			facets={facets}
 			getRowId={(row) => row.id}
+			rowLabel={(row) => `${row.name}, ${row.clientRef}`}
 			loading={clients.isFetching}
 			cards={(row) => <ClientCard row={row} />}
 			onRowClick={(row) =>

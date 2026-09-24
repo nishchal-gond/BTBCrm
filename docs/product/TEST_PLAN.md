@@ -231,25 +231,53 @@ Every data surface, with each state **deliberately forced**:
 
 ### Playwright (L2 + L3)
 
+Built. `apps/app/e2e`, run with `bun run --filter=app e2e`. Specs are named
+`*.e2e.ts`, not `*.spec.ts`, so `bun test` and Playwright never claim each other's
+files.
+
 ```
-e2e/
-├── auth.spec.ts
+apps/app/e2e/
+├── people.ts                       sessions, the API caller, shared locators
 ├── permissions/
-│   ├── client-visibility.spec.ts     P1–P9
-│   ├── indirect-access.spec.ts       P10–P16   ← highest value
-│   ├── escalation.spec.ts            P17–P23
-│   ├── immutability.spec.ts          P24–P32
-│   └── calendar-privacy.spec.ts      P33–P38
-├── conversion.spec.ts
-├── deposits.spec.ts
-├── duplicates.spec.ts
-├── calendar-recurrence.spec.ts
-├── globe.spec.ts
-└── states.spec.ts
+│   ├── client-visibility.e2e.ts    a client is visible to three people
+│   ├── money.e2e.ts                a mentor never sees money
+│   ├── immutability.e2e.ts         what nobody may do, admin included
+│   ├── calendar-privacy.e2e.ts     busy ranges carry times and nothing else
+│   └── business-lines.e2e.ts       a line is a wall, not a label
+├── client-journey.e2e.ts           list, search, filter, record, conversion
+├── money-and-schedule.e2e.ts       the ledger, the schedule, the overview
+├── keyboard.e2e.ts                 focus rings, focus trapping, Escape, arrows
+├── responsive.e2e.ts               ten widths, overflow, touch targets
+└── console.e2e.ts                  every route, four widths, a silent console
 ```
 
-One browser context per seeded user, run in parallel. The `permissions/` directory is
-the non-negotiable core — it may never be skipped, quarantined, or marked flaky-tolerant.
+`people.ts` mints a real session per seeded role by shelling out to
+`bun run --filter=api dev:session`, so every spec runs as a real signed-in person
+rather than a mocked one. `callApi` hits the tRPC endpoint directly with that
+cookie, which is how the permission specs prove a refusal survives the UI being
+bypassed. `mentorAssignedClient` builds its own client, qualifies it and gives
+it a mentor, so the conversion spec never depends on a row an earlier run has
+already converted.
+
+`signIn` also injects one rule hiding the React Query devtools. They mount only
+under `next dev`, they are absent from every build the product ships, and at
+375px their floating button sits on top of the pagination control. Nothing else
+about the page is altered.
+
+Two projects, `desktop` at 1440 and `mobile` at 375 with touch emulation.
+`responsive.e2e.ts` and `console.e2e.ts` drive their own viewports and run in
+`desktop` only.
+
+`console.e2e.ts` walks eighteen routes and the six client-record tabs at 375,
+768, 1024 and 1440 as an administrator. It fails on any console error, any
+uncaught page error, and any response of 400 or worse. It is how a hydration
+mismatch or a broken route is caught rather than being noticed by a person.
+
+The `permissions/` directory is the non-negotiable core — it may never be skipped,
+quarantined, or marked flaky-tolerant.
+
+Not built: `duplicates`, `calendar-recurrence` and `globe`, because recurrence and
+the globe are not built either.
 
 ### Vitest (L4)
 

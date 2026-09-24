@@ -14,6 +14,8 @@ import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { TrackingSections } from "./tracking-sections";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Tracking & Analytics",
 };

@@ -3,6 +3,7 @@ import { db } from "@crm/db";
 import { type Actor, loadActor } from "@crm/db/access";
 import { ClientsService } from "../src/clients/clients.service";
 import { DepositsService } from "../src/deposits/deposits.service";
+import { withoutDeleteGuards } from "./guards";
 
 const suffix = process.env.TEST_RUN_ID ?? "deposits-spec";
 
@@ -34,15 +35,10 @@ async function cleanUp(): Promise<void> {
 	});
 	const clientIds = mine.map((row) => row.id);
 
-	await db.$executeRawUnsafe(
-		'ALTER TABLE "deposit" DISABLE TRIGGER "deposit_no_delete"',
-	);
-	await db.deposit.deleteMany({ where: { clientId: { in: clientIds } } });
-	await db.$executeRawUnsafe(
-		'ALTER TABLE "deposit" ENABLE TRIGGER "deposit_no_delete"',
-	);
-
-	await db.client.deleteMany({ where: { id: { in: clientIds } } });
+	await withoutDeleteGuards(async () => {
+		await db.deposit.deleteMany({ where: { clientId: { in: clientIds } } });
+		await db.client.deleteMany({ where: { id: { in: clientIds } } });
+	});
 	await db.staffProfile.deleteMany({ where: { userId: { in: staffIds } } });
 	await db.user.deleteMany({ where: { id: { in: staffIds } } });
 }

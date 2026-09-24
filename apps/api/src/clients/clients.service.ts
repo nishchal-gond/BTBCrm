@@ -1,12 +1,15 @@
 import { type Db, Prisma, withActor } from "@crm/db";
 import {
 	type Actor,
+	can,
 	canAccessFinancials,
 	canAccessVertical,
 	canEditClient,
 	clientScope,
-	isMentorSide,
 	isSalesSide,
+	type OwnerSide,
+	roleOwnsSide,
+	roleWorksVertical,
 	seesEveryClient,
 	VERTICALS,
 	visibleOwnerIds,
@@ -14,6 +17,7 @@ import {
 import {
 	CLIENT_STATUSES,
 	conversionStatusFor,
+	isConverted,
 	judgeTransition,
 	statusesForVertical,
 	statusesForView,
@@ -44,6 +48,7 @@ import type {
 	ClientDetail,
 	ClientListInput,
 	ClientRow,
+	ClientWorkspaceInput,
 	ConvertClientInput,
 	CreateClientInput,
 	DuplicateCheckInput,
@@ -144,17 +149,22 @@ export class ClientsService {
 
 	constructor(@InjectDatabase() private readonly db: Db) {}
 
-	workspace(actor: Actor) {
-		const verticals = VERTICALS.filter((vertical) =>
-			canAccessVertical(actor, vertical),
-		);
+	workspace(actor: Actor, input: ClientWorkspaceInput) {
+		const verticals = VERTICALS.filter((one) => canAccessVertical(actor, one));
 
-		const vertical = verticals[0] ?? "ACADEMY";
+		const wanted = input.vertical;
+
+		const vertical =
+			wanted !== null && verticals.includes(wanted)
+				? wanted
+				: (verticals[0] ?? "ACADEMY");
 
 		return {
 			verticals,
+			vertical,
 			views: [...viewsForVertical(vertical)],
 			statuses: [...statusesForVertical(vertical)],
+			canCreate: can(actor, "clients.create"),
 		};
 	}
 
@@ -266,14 +276,30 @@ export class ClientsService {
 	}
 
 	private detail(actor: Actor, row: DetailShape): ClientDetail {
+		const editable = canEditClient(actor, row);
+
+		const reassigning =
+			row.mentorOwnerId !== null && !can(actor, "clients.reassignMentor");
+
 		return {
 			...toRow(row),
 			createdBy: owner(row.createdBy),
 			convertedBy: owner(row.convertedBy),
 			convertedAt: row.convertedAt?.toISOString() ?? null,
 			updatedAt: row.updatedAt.toISOString(),
-			canEdit: canEditClient(actor, row),
+			canEdit: editable,
 			canSeeMoney: canAccessFinancials(actor, row),
+			canConvert:
+				editable &&
+				can(actor, "clients.convert") &&
+				judgeTransition(row.vertical, row.status, "CONVERTED").allowed,
+			canAssignMentor:
+				editable &&
+				row.vertical === "ACADEMY" &&
+				can(actor, "clients.assignMentor") &&
+				!reassigning,
+			canAssignSalesOwner: editable && can(actor, "clients.assignSalesOwner"),
+			reconverting: row.convertedAt !== null && !isConverted(row.status),
 		};
 	}
 
@@ -453,7 +479,7 @@ export class ClientsService {
 	private async requireStaffInVertical(
 		userId: string,
 		vertical: Vertical,
-		expectation: "sales" | "mentor",
+		expectation: OwnerSide,
 	): Promise<void> {
 		const profile = await this.db.staffProfile.findUnique({
 			where: { userId },
@@ -464,19 +490,13 @@ export class ClientsService {
 			throw new BadRequestException("That person has no active staff profile.");
 		}
 
-		if (profile.role !== "ADMIN" && !profile.verticals.includes(vertical)) {
+		if (!roleWorksVertical(profile.role, profile.verticals, vertical)) {
 			throw new BadRequestException(
 				"That person does not work in this business line.",
 			);
 		}
 
-		const fits =
-			profile.role === "ADMIN" ||
-			(expectation === "sales"
-				? isSalesSide(profile.role)
-				: isMentorSide(profile.role));
-
-		if (!fits) {
+		if (!roleOwnsSide(profile.role, expectation)) {
 			throw new BadRequestException(
 				expectation === "sales"
 					? "A sales owner has to be on the sales side."
@@ -539,6 +559,17 @@ export class ClientsService {
 			);
 		}
 
+		const reassigning =
+			row.mentorOwnerId !== null && input.userId !== row.mentorOwnerId;
+
+		if (reassigning) {
+			requireCapability(
+				actor,
+				"clients.reassignMentor",
+				"This client has a mentor already. Only an administrator moves a client to a different mentor.",
+			);
+		}
+
 		if (input.userId === null && row.convertedAt !== null) {
 			throw new BadRequestException(
 				"A converted client keeps a mentor. Assign a different one instead of removing this one.",
@@ -588,11 +619,17 @@ export class ClientsService {
 			);
 		}
 
+		if (input.status === "STUDENT") {
+			throw new BadRequestException(
+				"A client becomes a student by enrolling on a programme, never by a status change alone.",
+			);
+		}
+
 		const verdict = judgeTransition(row.vertical, row.status, input.status);
 
 		if (!verdict.allowed) throw new BadRequestException(verdict.because);
 
-		if (verdict.adminOnly && actor.role !== "ADMIN") {
+		if (verdict.adminOnly && !can(actor, "clients.reverseConversion")) {
 			throw new ForbiddenException(
 				"Only an administrator moves a converted client backwards.",
 			);
@@ -635,9 +672,11 @@ export class ClientsService {
 		const row = await this.readable(actor, input.clientRef);
 		this.requireEdit(actor, row);
 
-		if (row.convertedAt !== null) {
+		const reconverting = row.convertedAt !== null;
+
+		if (reconverting && isConverted(row.status)) {
 			throw new ConflictException(
-				`${row.clientRef} converted already, on ${row.convertedAt.toISOString()}. A client converts once.`,
+				`${row.clientRef} converted already, on ${row.convertedAt?.toISOString()}. A client converts once.`,
 			);
 		}
 
@@ -653,26 +692,32 @@ export class ClientsService {
 			await this.requireStaffInVertical(mentorId, row.vertical, "mentor");
 		}
 
-		const from = conversionStatusFor(row.vertical);
+		const verdict = judgeTransition(row.vertical, row.status, "CONVERTED");
 
-		if (row.status !== from && row.status !== "MENTOR_ASSIGNED") {
+		if (!verdict.allowed) {
 			throw new BadRequestException(
-				`A client converts from ${from}. ${row.clientRef} is ${row.status}.`,
+				`${row.clientRef} is ${row.status}. A client converts from ${conversionStatusFor(row.vertical)}.`,
 			);
 		}
 
+		const stamp = reconverting
+			? {}
+			: { convertedById: actor.userId, convertedAt: new Date() };
+
 		const converted = await withActor(
 			this.db,
-			{ actorId: actor.userId, statusReason: "Converted" },
+			{
+				actorId: actor.userId,
+				statusReason: reconverting ? "Converted again" : "Converted",
+			},
 			(tx) =>
 				tx.client.update({
 					where: { id: row.id },
 					data: {
 						status: "CONVERTED",
 						mentorOwnerId: mentorId,
-						convertedById: actor.userId,
-						convertedAt: new Date(),
 						lastActivityAt: new Date(),
+						...stamp,
 					},
 					select: DETAIL_SELECT,
 				}),

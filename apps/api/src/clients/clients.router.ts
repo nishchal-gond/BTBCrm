@@ -18,6 +18,7 @@ import {
 	clientListInput,
 	clientListOutput,
 	clientRefInput,
+	clientWorkspaceInput,
 	clientWorkspaceOutput,
 	convertClientInput,
 	createClientInput,
@@ -37,11 +38,15 @@ export class ClientsRouter {
 	) {}
 
 	@Query({
+		input: clientWorkspaceInput,
 		output: clientWorkspaceOutput,
-		meta: restMeta("GET", "/clients/workspace", ["Clients"]),
+		meta: restMeta("POST", "/clients/workspace", ["Clients"]),
 	})
-	async workspace(@Ctx() ctx: ActorTrpcContext) {
-		return this.clients.workspace(ctx.actor);
+	async workspace(
+		@Ctx() ctx: ActorTrpcContext,
+		@Input() input: z.infer<typeof clientWorkspaceInput>,
+	) {
+		return this.clients.workspace(ctx.actor, input);
 	}
 
 	@Query({

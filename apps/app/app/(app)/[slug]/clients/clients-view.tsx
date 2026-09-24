@@ -3,11 +3,12 @@ import {
 	PageShell,
 	PageShellContent,
 	PageShellDescription,
-	PageShellFallback,
 	PageShellHeader,
 	PageShellHeading,
 	PageShellTitle,
 } from "@/components/page-shell";
+import { TableFallback } from "@/components/skeletons";
+import { BUSINESS_LINES, readBusinessLine } from "@/lib/business-line";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
@@ -37,7 +38,7 @@ export function ClientsView({
 			</PageShellHeader>
 
 			<PageShellContent className="min-h-0">
-				<Suspense fallback={<PageShellFallback />}>
+				<Suspense fallback={<TableFallback />}>
 					<Rows view={view} searchParams={searchParams} />
 				</Suspense>
 			</PageShellContent>
@@ -60,8 +61,10 @@ async function Rows({
 	const trpc = getServerTrpc();
 	const queryClient = getServerQueryClient();
 
+	const wanted = readBusinessLine(await searchParams, BUSINESS_LINES);
+
 	const workspace = await queryClient.fetchQuery(
-		trpc.clients.workspace.queryOptions(),
+		trpc.clients.workspace.queryOptions({ vertical: wanted }),
 	);
 
 	const base = clientsSearchParams.toInput(values);
@@ -73,7 +76,7 @@ async function Rows({
 			dir: base.dir,
 			page: base.page,
 			pageSize: base.pageSize,
-			vertical: workspace.verticals[0] ?? "ACADEMY",
+			vertical: workspace.vertical,
 			view,
 			status: base.status,
 			salesOwner: base.salesOwner,

@@ -1,19 +1,24 @@
+import Money from "@carbon/icons-react/es/Money";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PageNotice } from "@/components/page-notice";
 import {
 	PageShell,
 	PageShellContent,
 	PageShellDescription,
-	PageShellFallback,
 	PageShellHeader,
 	PageShellHeading,
 	PageShellTitle,
 } from "@/components/page-shell";
+import { TableFallback } from "@/components/skeletons";
+import { BUSINESS_LINES, readBusinessLine } from "@/lib/business-line";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { depositsSearchParams } from "./deposits-search-params";
 import { DepositsTable } from "./deposits-table";
+
+export const instant = false;
 
 export const metadata: Metadata = {
 	title: "Deposits",
@@ -35,7 +40,7 @@ export default function DepositsPage({
 			</PageShellHeader>
 
 			<PageShellContent className="min-h-0">
-				<Suspense fallback={<PageShellFallback />}>
+				<Suspense fallback={<TableFallback />}>
 					<Ledger searchParams={searchParams} />
 				</Suspense>
 			</PageShellContent>
@@ -54,8 +59,21 @@ async function Ledger({
 	const trpc = getServerTrpc();
 	const queryClient = getServerQueryClient();
 
+	const me = await queryClient.fetchQuery(trpc.staff.me.queryOptions());
+
+	if (!me.capabilities.includes("deposits.view")) {
+		return (
+			<PageNotice icon={Money} title="Deposits are not yours to read">
+				A mentor sees the client and never the money. Ask an administrator if
+				you need the ledger.
+			</PageNotice>
+		);
+	}
+
+	const wanted = readBusinessLine(await searchParams, BUSINESS_LINES);
+
 	const workspace = await queryClient.fetchQuery(
-		trpc.clients.workspace.queryOptions(),
+		trpc.clients.workspace.queryOptions({ vertical: wanted }),
 	);
 
 	const base = depositsSearchParams.toInput(values);
@@ -67,7 +85,7 @@ async function Ledger({
 			dir: base.dir,
 			page: base.page,
 			pageSize: base.pageSize,
-			vertical: workspace.verticals[0] ?? "ACADEMY",
+			vertical: workspace.vertical,
 			entryType: base.entryType,
 			verified: base.verified,
 			recordedBy: base.recordedBy,

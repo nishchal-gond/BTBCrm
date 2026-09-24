@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageShellFallback } from "@/components/page-shell";
+import { RecordFallback } from "@/components/skeletons";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { ClientRecord } from "./client-record";
+
+export const instant = false;
 
 export async function generateMetadata({
 	params,
@@ -17,7 +19,7 @@ export default function ClientPage({
 	params,
 }: PageProps<"/[slug]/clients/[clientRef]">) {
 	return (
-		<Suspense fallback={<PageShellFallback />}>
+		<Suspense fallback={<RecordFallback />}>
 			<Record params={params} />
 		</Suspense>
 	);

@@ -1,7 +1,7 @@
 "use client";
 
+import { KpiCell, KpiRail } from "@crm/ui/components/kpi-rail";
 import { cn } from "@crm/ui/lib/utils";
-import type { ReactNode } from "react";
 import { Money } from "@/components/crm/money";
 
 export type Totals = {
@@ -12,51 +12,6 @@ export type Totals = {
 	paymentCount: number;
 	entryCount: number;
 };
-
-function Cell({
-	label,
-	note,
-	onSelect,
-	selected,
-	children,
-}: {
-	label: string;
-	note: string;
-	onSelect?: () => void;
-	selected?: boolean;
-	children: ReactNode;
-}) {
-	const body = (
-		<>
-			<span className="font-medium text-2xs text-muted-foreground uppercase tracking-label">
-				{label}
-			</span>
-			{children}
-			<span className="text-muted-foreground text-xs">{note}</span>
-		</>
-	);
-
-	if (!onSelect) {
-		return <div className="flex flex-col gap-1 px-4 py-3">{body}</div>;
-	}
-
-	return (
-		<button
-			type="button"
-			aria-pressed={selected}
-			onClick={onSelect}
-			className={cn(
-				"relative flex flex-col items-start gap-1 px-4 py-3 text-left transition-colors duration-[var(--dur-fast)] ease-out",
-				"before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent before:opacity-0",
-				selected
-					? "bg-accent-muted before:opacity-100 hover:bg-accent-muted"
-					: "hover:bg-hover",
-			)}
-		>
-			{body}
-		</button>
-	);
-}
 
 export function LedgerTotals({
 	totals,
@@ -78,11 +33,8 @@ export function LedgerTotals({
 	};
 
 	return (
-		<section
-			aria-label="Ledger totals"
-			className="grid grid-cols-1 divide-y divide-subtle rounded-lg border bg-card lg:grid-cols-3 lg:divide-x lg:divide-y-0"
-		>
-			<Cell
+		<KpiRail label="Ledger totals" columns={3}>
+			<KpiCell
 				label="Total"
 				note={
 					compact
@@ -91,37 +43,40 @@ export function LedgerTotals({
 				}
 				onSelect={onFilter ? () => onFilter([]) : undefined}
 				selected={onFilter ? showing.length === 0 : undefined}
+				selectLabel="Show every entry"
 			>
 				<Money
 					amount={totals.total}
 					currency={totals.currency}
 					className={cn(size, "font-semibold")}
 				/>
-			</Cell>
-			<Cell
+			</KpiCell>
+			<KpiCell
 				label="Verified"
 				note="Checked against the bank"
 				onSelect={onFilter ? () => toggle("verified") : undefined}
 				selected={showing.includes("verified")}
+				selectLabel="Show verified entries only"
 			>
 				<Money
 					amount={totals.verified}
 					currency={totals.currency}
 					className={cn(size, "font-semibold")}
 				/>
-			</Cell>
-			<Cell
+			</KpiCell>
+			<KpiCell
 				label="Pending"
 				note="Recorded, not yet verified"
 				onSelect={onFilter ? () => toggle("pending") : undefined}
 				selected={showing.includes("pending")}
+				selectLabel="Show pending entries only"
 			>
 				<Money
 					amount={totals.pending}
 					currency={totals.currency}
 					className={cn(size, "font-semibold")}
 				/>
-			</Cell>
-		</section>
+			</KpiCell>
+		</KpiRail>
 	);
 }

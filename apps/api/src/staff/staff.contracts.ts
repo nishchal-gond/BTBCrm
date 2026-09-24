@@ -1,4 +1,4 @@
-import { CAPABILITIES, STAFF_ROLES } from "@crm/db/access";
+import { CAPABILITIES, STAFF_ROLES, VERTICALS } from "@crm/db/access";
 import { isTimeZone } from "@crm/validation/time-zone";
 import { z } from "zod";
 import { listInput } from "../trpc/list-input";
@@ -19,6 +19,7 @@ export const staffMemberOutput = z.object({
 	email: z.string(),
 	image: z.string().nullable(),
 	role: z.enum(STAFF_ROLES),
+	verticals: z.array(z.enum(VERTICALS)),
 	team: teamSummary.nullable(),
 	timezone: z.string(),
 	phone: z.string().nullable(),
@@ -34,6 +35,16 @@ export const staffMeOutput = staffMemberOutput.extend({
 });
 
 export type StaffMe = z.infer<typeof staffMeOutput>;
+
+export const setStaffVerticalsInput = z.object({
+	userId: z.string().min(1),
+	verticals: z
+		.array(z.enum(VERTICALS))
+		.min(1, "A person works in at least one business line.")
+		.transform((values) => [...new Set(values)]),
+});
+
+export type SetStaffVerticalsInput = z.infer<typeof setStaffVerticalsInput>;
 
 export const staffListInput = listInput.extend({
 	role: z.array(z.string()).default([]),

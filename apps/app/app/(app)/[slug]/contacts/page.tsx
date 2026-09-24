@@ -17,6 +17,8 @@ import { contactsSearchParams } from "./contacts-search-params";
 import { ContactsTable } from "./contacts-table";
 import { CreateContactSheet } from "./create-contact-sheet";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Contacts",
 };

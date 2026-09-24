@@ -22,7 +22,7 @@ export function describeFilters(
 	const named: ActiveFilter[] = [];
 
 	if (search.trim() !== "") {
-		named.push({ id: "q", label: `matching “${search.trim()}”` });
+		named.push({ id: "q", label: `people matching “${search.trim()}”` });
 	}
 
 	const statuses = filters.status ?? [];

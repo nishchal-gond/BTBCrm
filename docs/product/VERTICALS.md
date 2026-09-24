@@ -76,9 +76,12 @@ call sites, no test that compared them.
    `client.vertical` becomes the line last worked. That is a migration, not a
    rewrite, but it is cheaper before the table carries data. **Raise before
    the real-estate modules are built.**
-2. **Who sets `staffProfile.verticals`.** Users admin is module 10. Until it is
-   built, every profile carries the `ACADEMY` default and only an admin can
-   reach real estate.
+2. ~~**Who sets `staffProfile.verticals`.**~~ **Settled.** An administrator,
+   through `staff.setVerticals`, which holds `users.manage` and refuses
+   everybody else. The admin *screen* is still module 10, but the procedure
+   exists, so a line can be granted without a database edit. A profile still
+   carries the `ACADEMY` default, and an `ADMIN` still gets every line
+   implicitly and stores none.
 3. **`clientRef` across lines.** One sequence, one ref per human, whichever
    line entered them. The ref does not say which line, and it should not.
 
@@ -89,3 +92,25 @@ call sites, no test that compared them.
 The ledger is the same table for both lines. `deposit.clientId` carries the
 business line through `client.vertical`, so a reader who works one line never
 reaches the other's money, and no deposit row stores a line of its own.
+
+## Switching between lines
+
+The line lives in the URL, as `?line=REAL_ESTATE`. `ACADEMY` is the default and
+is left out. The switcher sits in the top bar and renders only for somebody who
+works more than one line, which today means an administrator or anybody an
+administrator has granted a second line.
+
+Switching clears the list parameters that belong to the line it is leaving —
+the page, the status facet, both owner facets — because a status like
+`MENTOR_ASSIGNED` does not exist on the real-estate side and a stale filter
+would produce an empty screen with no visible cause.
+
+`clients.workspace` is the one place the line is resolved. It takes the line the
+URL asked for, clamps it to one the viewer actually works in, and returns that
+alongside the views and statuses for it. Every screen reads the clamped answer
+rather than trusting the URL, and the API refuses a forged line outright, so the
+clamp is a convenience and never the boundary.
+
+Modules that belong to one line leave the navigation on the other:
+Students and Programmes are academy-only. Deposits leaves it for anybody without
+`deposits.view`, which is the whole mentor side.

@@ -1,6 +1,14 @@
 import { Inject } from "@nestjs/common";
-import { Input, Mutation, Query, Router, UseMiddlewares } from "nestjs-trpc";
+import {
+	Ctx,
+	Input,
+	Mutation,
+	Query,
+	Router,
+	UseMiddlewares,
+} from "nestjs-trpc";
 import type { z } from "zod";
+import type { AuthedTrpcContext } from "../trpc/context.types";
 import { AuthMiddleware } from "../trpc/middlewares/auth.middleware";
 import { restMeta } from "../trpc/openapi";
 import {
@@ -42,16 +50,19 @@ export class SettingsRouter {
 		output: agentModelOutput,
 		meta: restMeta("PATCH", "/settings/agent-model", ["Settings"]),
 	})
-	async setAgentModel(@Input() input: z.infer<typeof setAgentModelInput>) {
-		return this.settings.setAgentModel(input.modelId);
+	async setAgentModel(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof setAgentModelInput>,
+	) {
+		return this.settings.setAgentModel(ctx.user.id, input.modelId);
 	}
 
 	@Query({
 		output: researchKeyOutput,
 		meta: restMeta("GET", "/settings/research-key", ["Settings"]),
 	})
-	async researchKey() {
-		return this.settings.researchKey();
+	async researchKey(@Ctx() ctx: AuthedTrpcContext) {
+		return this.settings.researchKey(ctx.user.id);
 	}
 
 	@Mutation({
@@ -59,8 +70,19 @@ export class SettingsRouter {
 		output: researchKeyOutput,
 		meta: restMeta("PATCH", "/settings/research-key", ["Settings"]),
 	})
-	async setResearchKey(@Input() input: z.infer<typeof setResearchKeyInput>) {
-		return this.settings.setResearchKey(input.apiKey);
+	async setResearchKey(
+		@Ctx() ctx: AuthedTrpcContext,
+		@Input() input: z.infer<typeof setResearchKeyInput>,
+	) {
+		return this.settings.setResearchKey(ctx.user.id, input.apiKey);
+	}
+
+	@Mutation({
+		output: researchKeyOutput,
+		meta: restMeta("POST", "/settings/research-key/defer", ["Settings"]),
+	})
+	async deferResearchKey(@Ctx() ctx: AuthedTrpcContext) {
+		return this.settings.deferResearchKey(ctx.user.id);
 	}
 
 	@Query({
@@ -77,8 +99,9 @@ export class SettingsRouter {
 		meta: restMeta("PATCH", "/settings/archive-retention", ["Settings"]),
 	})
 	async setArchiveRetention(
+		@Ctx() ctx: AuthedTrpcContext,
 		@Input() input: z.infer<typeof setArchiveRetentionDaysInput>,
 	) {
-		return this.settings.setArchiveRetention(input.days);
+		return this.settings.setArchiveRetention(ctx.user.id, input.days);
 	}
 }

@@ -4,16 +4,18 @@ import {
 	PageShell,
 	PageShellContent,
 	PageShellDescription,
-	PageShellFallback,
 	PageShellHeader,
 	PageShellHeading,
 	PageShellTitle,
 } from "@/components/page-shell";
+import { TableFallback } from "@/components/skeletons";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { programsSearchParams } from "./programs-search-params";
 import { ProgramsTable } from "./programs-table";
+
+export const instant = false;
 
 export const metadata: Metadata = {
 	title: "Programs",
@@ -34,7 +36,7 @@ export default function ProgramsPage({
 			</PageShellHeader>
 
 			<PageShellContent className="min-h-0">
-				<Suspense fallback={<PageShellFallback />}>
+				<Suspense fallback={<TableFallback />}>
 					<Catalogue searchParams={searchParams} />
 				</Suspense>
 			</PageShellContent>

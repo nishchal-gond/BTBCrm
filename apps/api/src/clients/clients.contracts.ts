@@ -46,6 +46,10 @@ export const clientDetailOutput = clientRowOutput.extend({
 	updatedAt: z.string(),
 	canEdit: z.boolean(),
 	canSeeMoney: z.boolean(),
+	canConvert: z.boolean(),
+	canAssignMentor: z.boolean(),
+	canAssignSalesOwner: z.boolean(),
+	reconverting: z.boolean(),
 });
 
 export type ClientDetail = z.infer<typeof clientDetailOutput>;
@@ -157,8 +161,16 @@ export const duplicateCheckOutput = z.object({
 		.nullable(),
 });
 
+export const clientWorkspaceInput = z.object({
+	vertical: z.enum(VERTICALS).nullable().default(null),
+});
+
+export type ClientWorkspaceInput = z.infer<typeof clientWorkspaceInput>;
+
 export const clientWorkspaceOutput = z.object({
 	verticals: z.array(z.enum(VERTICALS)),
+	vertical: z.enum(VERTICALS),
 	views: z.array(z.enum(CLIENT_VIEWS)),
 	statuses: z.array(z.enum(CLIENT_STATUSES)),
+	canCreate: z.boolean(),
 });

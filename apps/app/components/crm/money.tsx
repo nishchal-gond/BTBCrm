@@ -1,17 +1,16 @@
 import { cn } from "@crm/ui/lib/utils";
 
+const DIGITS = new Intl.NumberFormat("en-AE", {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+});
+
 export function formatLedgerAmount(amount: string, currency: string): string {
 	const value = Number(amount);
 
 	if (!Number.isFinite(value)) return `${currency} —`;
 
-	return new Intl.NumberFormat("en-AE", {
-		style: "currency",
-		currency,
-		currencyDisplay: "code",
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	}).format(value);
+	return `${currency} ${DIGITS.format(value)}`;
 }
 
 export function Money({
@@ -31,12 +30,13 @@ export function Money({
 	return (
 		<span
 			className={cn(
-				"font-mono text-sm tabular-nums",
+				"inline-flex items-baseline gap-1.5 font-mono text-sm tabular-nums",
 				tone === "signed" && negative && "text-negative-on-muted",
 				className,
 			)}
 		>
-			{formatLedgerAmount(amount, currency)}
+			<span className="text-muted-foreground text-xs">{currency}</span>
+			<span>{Number.isFinite(value) ? DIGITS.format(value) : "—"}</span>
 		</span>
 	);
 }

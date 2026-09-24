@@ -70,7 +70,7 @@ function PageShellTitle({ className, ...props }: React.ComponentProps<"h1">) {
 		<h1
 			data-slot="page-shell-title"
 			className={cn(
-				"min-w-0 text-balance font-semibold text-lg tracking-tight sm:col-start-1 sm:row-start-1 sm:self-center md:text-xl",
+				"min-w-0 text-balance font-semibold text-lg tracking-tight sm:col-start-1 sm:row-start-1 sm:self-center",
 				className,
 			)}
 			{...props}
@@ -142,12 +142,11 @@ function PageShellFallback() {
 		<PageShell aria-busy="true">
 			<div className="flex flex-col gap-6" aria-hidden="true">
 				<div className="flex flex-col gap-3">
-					<Skeleton className="h-8 w-48 max-w-full" />
+					<Skeleton className="h-6 w-48 max-w-full" />
 					<Skeleton className="h-4 w-72 max-w-full" />
 				</div>
 				<div className="flex flex-col gap-3">
-					<Skeleton className="h-14 w-full rounded-lg" />
-					<Skeleton className="h-14 w-full rounded-lg" />
+					<Skeleton className="h-24 w-full rounded-lg" />
 					<Skeleton className="h-40 w-full rounded-lg" />
 				</div>
 			</div>

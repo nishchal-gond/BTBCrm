@@ -1,67 +1,23 @@
+import { instantFromWallClock, wallClockIn } from "@crm/validation/zoned-time";
+
 export const COMPANY_TIME_ZONE = "Asia/Dubai";
 
-const ZONE_LABELS = {
-	"Asia/Dubai": "GST",
-} as const satisfies Record<string, string>;
-
-export const COMPANY_TIME_LABEL: string =
-	COMPANY_TIME_ZONE in ZONE_LABELS
-		? ZONE_LABELS[COMPANY_TIME_ZONE as keyof typeof ZONE_LABELS]
-		: COMPANY_TIME_ZONE;
-
-const DAY = new Intl.DateTimeFormat("en-CA", {
-	timeZone: COMPANY_TIME_ZONE,
-	year: "numeric",
-	month: "2-digit",
-	day: "2-digit",
-});
-
-const WALL = new Intl.DateTimeFormat("en-US", {
-	timeZone: COMPANY_TIME_ZONE,
-	hour12: false,
-	year: "numeric",
-	month: "2-digit",
-	day: "2-digit",
-	hour: "2-digit",
-	minute: "2-digit",
-	second: "2-digit",
-});
-
-export function todayInCompanyZone(now: Date = new Date()): string {
-	return DAY.format(now);
+export function todayInZone(zone: string, now: Date = new Date()): string {
+	return wallClockIn(now, zone).day;
 }
 
-function wallClockOf(instant: Date): number {
-	const parts = Object.fromEntries(
-		WALL.formatToParts(instant).map((part) => [part.type, part.value]),
-	);
+export function middayInZone(day: string, zone: string): string {
+	const instant = instantFromWallClock({ day, time: "12:00" }, zone);
 
-	return Date.UTC(
-		Number(parts.year),
-		Number(parts.month) - 1,
-		Number(parts.day),
-		Number(parts.hour) % 24,
-		Number(parts.minute),
-		Number(parts.second),
-	);
+	return (instant ?? new Date()).toISOString();
 }
 
-export function instantForCompanyDay(
+export function instantForDay(
 	day: string,
+	zone: string,
 	now: Date = new Date(),
 ): string {
-	return day === todayInCompanyZone(now)
+	return day === todayInZone(zone, now)
 		? now.toISOString()
-		: middayInCompanyZone(day);
-}
-
-export function middayInCompanyZone(day: string): string {
-	const wanted = Date.parse(`${day}T12:00:00Z`);
-
-	let instant = new Date(wanted);
-	for (let pass = 0; pass < 2; pass += 1) {
-		instant = new Date(instant.getTime() + (wanted - wallClockOf(instant)));
-	}
-
-	return instant.toISOString();
+		: middayInZone(day, zone);
 }

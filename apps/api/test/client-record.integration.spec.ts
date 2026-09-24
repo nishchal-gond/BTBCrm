@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { db, type Prisma, withActor } from "@crm/db";
+import { withoutDeleteGuards } from "./guards";
 
 const suffix = process.env.TEST_RUN_ID ?? "client-record-spec";
 
@@ -16,7 +17,9 @@ function mail(local: string): string {
 }
 
 async function cleanUp(): Promise<void> {
-	await db.client.deleteMany({ where: { createdById: { in: staffIds } } });
+	await withoutDeleteGuards(async () => {
+		await db.client.deleteMany({ where: { createdById: { in: staffIds } } });
+	});
 	await db.staffProfile.deleteMany({ where: { userId: { in: staffIds } } });
 	await db.user.deleteMany({ where: { id: { in: staffIds } } });
 }

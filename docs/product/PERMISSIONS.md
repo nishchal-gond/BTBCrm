@@ -1,49 +1,74 @@
 # Permissions Matrix
 
 The authoritative action-by-action permission table. Roles are defined in
-[USER_ROLES.md](USER_ROLES.md); the RLS policies that enforce these rows are in
-[AUTHORIZATION.md](AUTHORIZATION.md).
+[USER_ROLES.md](USER_ROLES.md).
+
+**This table is the six-role model, and it matches `packages/db/src/access.ts`.**
+The implementation is the one thing that runs, so the matrix below is written from
+it. `STACK_MAPPING.md` §2 says why there is no RLS on this stack: Prisma connects as
+one database role, so authorization lives in one server module that every tRPC
+procedure calls. References to `supabase/migrations/` and to RLS policies are
+historical — read them as "the access module".
 
 **Legend**
 
 | Symbol | Meaning |
 | ------ | ------- |
 | ✅ | Permitted |
-| 🔶 | Permitted **only for records they own** (`sales_owner_id` or `mentor_owner_id` = them) |
+| 🔶 | Permitted **only for records they own** (`salesOwnerId` or `mentorOwnerId` = them, or a team they manage) |
 | ❌ | Denied — and for reads, denial means *the row does not exist*, not an error |
 | 🔒 | Denied to **everyone**, including admins |
 
-Every ✅/🔶 in this table must map to a policy in `supabase/migrations/`, and every ❌
-must have a corresponding negative test in [TEST_PLAN.md](TEST_PLAN.md).
+Every ✅/🔶 in this table maps to a capability in `packages/db/src/access.ts`, and
+every ❌ has a negative test in `apps/api/test/`.
+
+**The six roles.** `ADMIN` · `SALES_MANAGER` · `SALES` · `MENTOR_MANAGER` ·
+`MENTOR` · `FINANCE`. A manager is scoped to the members of a team they manage, so
+every 🔶 for a manager means "their own and their team's". Columns below fold the two
+manager roles into their side; where a manager differs, the cell says so.
 
 ---
 
 ## 1. Clients
 
-| Action                                  | Admin | Sales | Mentor |
-| --------------------------------------- | :---: | :---: | :----: |
-| List clients                            | ✅ all | 🔶 own | 🔶 assigned |
-| View client detail                      | ✅ | 🔶 | 🔶 |
-| Search clients (name, `CL-000184`, email)| ✅ | 🔶 | 🔶 |
-| Create lead                             | ✅ | ✅ | ❌ |
-| Edit client details                     | ✅ | 🔶 | 🔶 |
-| Change status forward                   | ✅ | 🔶 | 🔶 |
-| Change status backward (pre-conversion) | ✅ | 🔶 + reason | ❌ |
-| Change status backward (post-conversion)| ✅ + reason | ❌ | ❌ |
-| Assign / change `sales_owner_id`        | ✅ | ❌ | ❌ |
-| Assign `mentor_owner_id` (first time)   | ✅ | 🔶 via `assign_mentor()` * | ❌ |
-| Change `mentor_owner_id` (reassign)     | ✅ | ❌ | ❌ |
-| Convert to student                      | ✅ | ❌ | 🔶 |
-| Reverse a conversion                    | ✅ + reason | ❌ | ❌ |
-| Merge duplicates                        | ✅ | ❌ | ❌ |
-| Edit `client_ref`                       | 🔒 | 🔒 | 🔒 |
-| Edit `created_by`                       | 🔒 | 🔒 | 🔒 |
-| Edit `converted_by` / `converted_at`    | 🔒 | 🔒 | 🔒 |
-| Delete a client                         | 🔒 | 🔒 | 🔒 |
+| Action                                  | Admin | Sales | Mentor | Finance |
+| --------------------------------------- | :---: | :---: | :----: | :-----: |
+| List clients                            | ✅ all | 🔶 own | 🔶 assigned | ✅ all, read only |
+| View client detail                      | ✅ | 🔶 | 🔶 | ✅ read only |
+| Search clients (name, `CL-000184`, email)| ✅ | 🔶 | 🔶 | ✅ |
+| Create lead                             | ✅ | ✅ | ❌ | ❌ |
+| Edit client details                     | ✅ | 🔶 | 🔶 | ❌ |
+| Change status forward                   | ✅ | 🔶 | 🔶 | ❌ |
+| Change status backward (pre-conversion) | ✅ | 🔶 + reason | 🔶 + reason | ❌ |
+| Change status backward (post-conversion)| ✅ + reason | ❌ | ❌ | ❌ |
+| Become a student (`CONVERTED → STUDENT`) | 🔒 — enrol instead, §3 | 🔒 | 🔒 | 🔒 |
+| Assign / change `salesOwnerId`          | ✅ | ❌, manager 🔶 | ❌ | ❌ |
+| Assign `mentorOwnerId` (first time)     | ✅ | 🔶 | ❌ | ❌ |
+| Change `mentorOwnerId` (reassign)       | ✅ | ❌ | ❌ | ❌ |
+| Convert                                 | ✅ | ❌ | 🔶 | ❌ |
+| Reverse a conversion                    | ✅ + reason | ❌ | ❌ | ❌ |
+| Convert again after a reversal          | ✅ | ❌ | 🔶 | ❌ |
+| Edit `clientRef`                        | 🔒 | 🔒 | 🔒 | 🔒 |
+| Edit `createdById`                      | 🔒 | 🔒 | 🔒 | 🔒 |
+| Edit `convertedById` / `convertedAt`    | 🔒 | 🔒 | 🔒 | 🔒 |
+| Delete a client                         | 🔒 | 🔒 | 🔒 | 🔒 |
 
-\* Pending the open decision in [AUTHORIZATION.md](AUTHORIZATION.md) §Open 1. If the
-`assign_mentor()` function is not built, this cell becomes ❌ and mentor assignment is
-admin-only.
+**Sales assigns the first mentor; only an admin moves the client to a different
+one.** `clients.assignMentor` is held by admin, sales and sales manager.
+`clients.reassignMentor` is held by admin alone, and `assignMentor` demands it the
+moment the client already has a different mentor. This settles the open decision in
+`AUTHORIZATION.md` §Open 1: the sales owner may ask for a mentor without waiting for
+an admin, and the blanket ban on moving ownership stays intact.
+
+**A conversion happens once and the stamp is permanent.** `client_guard_immutable`
+refuses any change to `convertedAt` or `convertedById` once they are set. An admin
+may walk a converted client back to `MENTOR_ASSIGNED` with a reason; the stamp
+survives that, and converting again does not write a second one. The status history
+records both moves.
+
+**`CONVERTED → STUDENT` is not a status change.** `clients.setStatus` refuses it, and
+`client_student_needs_enrollment` refuses it at the database too. A client becomes a
+student by being enrolled on a programme, in one transaction — see §3.
 
 **Cross-owner denial — the core assertions:**
 
@@ -54,53 +79,87 @@ admin-only.
 
 ## 2. Deposits
 
-| Action                          | Admin | Sales | Mentor |
-| ------------------------------- | :---: | :---: | :----: |
-| View deposits for a client      | ✅ | 🔶 | 🔶 |
-| View global deposits list       | ✅ | 🔶 own clients only | 🔶 assigned only |
-| Record a payment                | ✅ | 🔶 | 🔶 |
-| Record a refund / adjustment    | ✅ | ❌ | ❌ |
-| Edit a deposit row              | 🔒 | 🔒 | 🔒 |
-| Delete a deposit row            | 🔒 | 🔒 | 🔒 |
-| View derived client total       | ✅ | 🔶 | 🔶 |
+**A mentor never sees money.** This was the one place where this document and
+`packages/db/src/access.ts` disagreed, and it is settled in favour of the narrower
+rule, because `USER_ROLES.md` states it as a decision already taken: *"Financial
+access is narrower than client access: `can_access_financials()` deliberately
+excludes mentors. A mentor teaches; they do not need payment history."* Least
+privilege agrees, and `FINANCE` — a role the three-role table predates — exists to
+hold the money side. The table below is the implementation.
 
-The ledger is append-only for **everyone**. There is no `update` or `delete` policy on
-`deposits`, and `update, delete` are additionally revoked from `authenticated`.
-Corrections are `adjustment` entries referencing the original.
+| Action                          | Admin | Sales | Mentor | Finance |
+| ------------------------------- | :---: | :---: | :----: | :-----: |
+| View deposits for a client      | ✅ | 🔶 sales-owned | ❌ | ✅ all |
+| View global deposits list       | ✅ | 🔶 own clients only | ❌ | ✅ all |
+| Record a payment                | ✅ | 🔶 | ❌ | ✅ |
+| Record a refund / adjustment    | ✅ | ❌ | ❌ | ✅ |
+| Verify an entry                 | ✅ | ❌ | ❌ | ✅ |
+| Edit a deposit row              | 🔒 | 🔒 | 🔒 | 🔒 |
+| Delete a deposit row            | 🔒 | 🔒 | 🔒 | 🔒 |
+| View derived client total       | ✅ | 🔶 | ❌ | ✅ |
 
-> **The table above is the three-role model and the implementation is the six-role
-> one.** `packages/db/src/access.ts` gives a mentor neither `deposits.view` nor
-> `deposits.record`, and `canAccessFinancials` fails closed for the whole mentor
-> side: a mentor sees the client and never the money. It also adds `FINANCE`,
-> which holds `deposits.verify` alongside an admin, so a refund or an adjustment
-> is theirs as well as an admin's. Where this table and `access.ts` disagree,
-> `access.ts` is what runs. **Open decision:** correct this table to six roles,
-> or change `access.ts`. Do not leave them disagreeing.
+`canAccessFinancials` fails closed on the whole mentor side before it looks at
+ownership, so a mentor assigned to a client reads that client and not its ledger.
+The Deposits tab on the client record and the Deposits item in the navigation are
+both hidden for a mentor, and `deposits.*` refuses a direct call with `FORBIDDEN`.
+
+The ledger is append-only for **everyone**. `deposit_append_only` refuses every
+`UPDATE` that changes a recorded field, `deposit_no_delete` refuses every `DELETE`,
+and there is no update or delete procedure. Corrections are `ADJUSTMENT` entries
+that reference the original, on the same client, enforced by
+`deposit_corrects_same_client`. `deposit_ledger_currency` pins every row to `AED`,
+because a derived total across two currencies is a wrong number.
 
 ## 3. Students and enrollments
 
-| Action                          | Admin | Sales | Mentor |
-| ------------------------------- | :---: | :---: | :----: |
-| List students                   | ✅ all | 🔶 own | 🔶 assigned |
-| View enrollment                 | ✅ | 🔶 | 🔶 |
-| Create enrollment               | ✅ | ❌ | 🔶 |
-| Edit enrollment / progress      | ✅ | ❌ | 🔶 |
-| Mark completed / withdrawn      | ✅ | ❌ | 🔶 |
-| Delete enrollment               | ✅ | ❌ | ❌ |
+| Action                          | Admin | Sales | Mentor | Finance |
+| ------------------------------- | :---: | :---: | :----: | :-----: |
+| List students                   | ✅ all | 🔶 own | 🔶 assigned | ✅ read only |
+| View enrollment                 | ✅ | 🔶 | 🔶 | ✅ |
+| Create enrollment               | ✅ | ❌ | 🔶 | ❌ |
+| Edit enrollment / progress      | ✅ | ❌ | 🔶 | ❌ |
+| Pause and resume                | ✅ | ❌ | 🔶 | ❌ |
+| Mark completed / withdrawn      | ✅ | ❌ | 🔶 | ❌ |
+| Reassign the enrolment's mentor | ✅ | ❌ | 🔶 | ❌ |
+| Delete enrollment               | 🔒 | 🔒 | 🔒 | 🔒 |
 
 Enrollments carry no personal data — only program, cohort, mentor, and progress.
 
+**An enrolment is withdrawn, never deleted.** The three-role table gave an admin a
+delete; it is withdrawn here, because every other history in this product is
+immutable and because deleting the enrolment of a `STUDENT` would leave a student
+with no enrolment — the exact state `client_student_needs_enrollment` exists to
+prevent. `enrollment_no_delete` refuses it at the database.
+`enrollment_guard_immutable` also pins `clientId`, `programId`, `enrolledAt` and
+`createdById`: moving a student to a different programme is a withdrawal and a new
+enrolment, so the history says what actually happened.
+
+**One open enrolment per client.** `enrollment_one_open_per_client` is a partial
+unique index on `("clientId") WHERE "closedAt" IS NULL`, and `enrollment_close_stamp`
+maintains `closedAt` from the status. A paused enrolment still holds the slot, so a
+second enrolment is refused while the first is on hold. Two concurrent enrolments
+resolve to one row and one `409`.
+
+**Enrolling is what makes a student.** `programs.enroll` writes the enrolment and
+moves `CONVERTED → STUDENT` in one transaction, so the trigger that demands an active
+enrolment sees it. `enrollment_needs_converted_client` refuses an enrolment for
+anyone who has not converted, and `enrollment_is_academy` refuses one on the real
+estate side.
+
 ## 4. Programs
 
-| Action              | Admin | Sales | Mentor |
-| ------------------- | :---: | :---: | :----: |
-| View programs       | ✅ | ✅ | ✅ |
-| Create program      | ✅ | ❌ | ❌ |
-| Edit program        | ✅ | ❌ | ❌ |
-| Deactivate program  | ✅ | ❌ | ❌ |
-| Delete program      | 🔒 | 🔒 | 🔒 |
+| Action              | Admin | Sales | Mentor | Finance |
+| ------------------- | :---: | :---: | :----: | :-----: |
+| View programs       | ✅ | ✅ | ✅ | ✅ |
+| Create program      | ✅ | ❌ | ❌ | ❌ |
+| Edit program        | ✅ | ❌ | ❌ | ❌ |
+| Retire program      | ✅ | ❌ | ❌ | ❌ |
+| Delete program      | 🔒 | 🔒 | 🔒 | 🔒 |
 
-Reference data. Deactivated rather than deleted — enrollments reference them.
+Reference data. Retired rather than deleted — enrollments reference them, and
+`program_no_delete` refuses the delete. A programme cannot be retired while anybody
+is still on it: the procedure counts open enrolments and refuses with a `409` that
+names the number.
 
 ## 5. Calendar
 
@@ -206,17 +265,26 @@ comes from RLS — the queries are identical, the results differ.
 
 ## 11. Enforcement summary
 
-| Layer               | Enforces                                     | Is the guarantee? |
-| ------------------- | -------------------------------------------- | ----------------- |
-| PostgreSQL RLS      | every 🔶 and ❌ in this document              | **Yes**           |
-| `security definer` fns | the single definition of client access     | **Yes**           |
-| Table grants        | 🔒 rows (`revoke update, delete`)             | **Yes**           |
-| Server Actions      | input validation + explicit ownership checks  | Defense in depth  |
-| Route layouts       | admin-only route groups                       | UX                |
-| Client components   | hiding unusable controls                      | UX only           |
+| Layer | Enforces | Is the guarantee? |
+| ----- | -------- | ----------------- |
+| `packages/db/src/access.ts` | every 🔶 and ❌ in this document | **Yes** |
+| Check constraints and triggers | 🔒 rows, and every invariant SQL can state | **Yes** |
+| tRPC procedures | input validation, then one call into the access module | Defense in depth |
+| Route layouts | admin-only route groups | UX |
+| Client components | hiding unusable controls | UX only |
 
 **Nothing in the bottom three rows may be the only thing standing between a user and a
 record.**
+
+There is no RLS on this stack. `STACK_MAPPING.md` §2 explains why, and what replaces
+it: one module, called by every read and every write, with a test that greps for
+procedures that skip it — `apps/api/test/domain-guard.spec.ts`. It asserts that every
+domain router carries `ActorMiddleware`, that every domain service builds its `where`
+from `clientScope` or `eventScope`, that no service tests a role name of its own, that
+no delete procedure exists on the ledger, and that every constraint and trigger this
+document names is present in a migration. The database still carries every invariant it can express —
+immutability, append-only, one-open-enrolment, the conversion chain — as constraints
+and triggers, so a bug in the application cannot corrupt a row.
 
 ---
 
@@ -224,23 +292,28 @@ record.**
 
 Every ❌ and 🔒 above is a test case. The non-negotiable set:
 
-1. `sales_b` reads `sales_a`'s client → 0 rows (UI **and** direct Supabase query)
-2. `mentor_b` reads `mentor_a`'s client → 0 rows (both levels)
-3. `sales_b` reads `sales_a`'s client's deposits → 0 rows
-4. `sales_b` reads `sales_a`'s client's calendar events → 0 rows
-5. `sales_b` reads `sales_a`'s client's tasks → 0 rows
-6. `sales_b` reads `sales_a`'s client's audit entries → 0 rows
-7. `sales_a` sets own `role = 'admin'` → rejected
-8. `sales_a` sets own `is_active` → rejected
-9. `sales_b` sets `sales_owner_id = self` on any client → rejected
-10. `sales_a` updates a `deposits` row → rejected
-11. `sales_a` deletes a `deposits` row → rejected
-12. `admin` updates an `audit_log` row → rejected
-13. `admin` deletes an `audit_log` row → rejected
-14. Any user updates a `client_ref` → rejected
-15. `app.busy_ranges()` returns exactly two columns
-16. Non-owner hitting `/clients/CL-000184` → no name in body, `<title>`, or metadata
-17. `sales_a` creates a `company_meeting` → rejected
-18. Any user deletes a client → rejected
+1. `sales_b` reads `sales_a`'s client → not found, in the list and by reference
+2. `mentor_b` reads `mentor_a`'s client → not found
+3. `sales_b` reads `sales_a`'s client's deposits → not found
+4. A mentor reads any client's deposits → forbidden, on their own client too
+5. `sales_b` reads `sales_a`'s client's calendar events → not found
+6. `sales_b` reads `sales_a`'s client's status history → not found
+7. `sales_a` sets own `role = ADMIN` → rejected
+8. `sales_a` sets own `isActive` → rejected
+9. `sales_b` sets `salesOwnerId = self` on any client → rejected
+10. Sales moves a client to a different mentor → rejected
+11. Any user updates a `deposit` row → rejected
+12. Any user deletes a `deposit` row → rejected
+13. Any user updates a `clientRef` → rejected
+14. Any user deletes a client → rejected
+15. Any user deletes an enrolment or a programme → rejected
+16. A second open enrolment on one client → rejected
+17. A status move straight to `STUDENT` → rejected, at the API and at the database
+18. An enrolment for a client who has not converted → rejected at the database
+19. A client entered straight as a `STUDENT` → rejected at the database
+20. Busy ranges return times only, never a title or a client
+21. Non-owner hitting `/clients/CL-000184` → no name in body, `<title>`, or metadata
+22. A salesperson creates a company event → rejected
+23. A member who is not a workspace admin writes a workspace setting → rejected
 
 Full specification in [TEST_PLAN.md](TEST_PLAN.md).

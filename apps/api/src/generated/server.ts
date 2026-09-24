@@ -16,7 +16,7 @@ const publicProcedure = t.procedure;
 import { timelineInput, timelineOutput, timelineCountsInput, timelineCountsOutput, myTasksInput, myTasksOutput, activityCreateInput, activityCreateOutput, completeInput, completeOutput } from "../activities/activities.contracts";
 import { agentListOutput, agentReviseInput, agentReviseOutput, agentIdInput, agentFilesOutput, agentSaveFileInput, agentSaveFileOutput, agentByIdOutput, agentHistoryInput, agentHistoryOutput, agentActivityOutput, agentUpdateInput, agentUpdateOutput, agentDeployInput, agentDeployOutput, agentPauseOutput, agentResumeOutput, agentArchiveOutput, agentRestoreOutput, agentRemoveOutput, agentRunNowInput, agentRunNowOutput, agentRetryRunInput, agentRetryRunOutput, agentCancelRunInput, agentCancelRunOutput } from "../agent/agents.contracts";
 import { apiKeyListInput, apiKeyListOutput, createApiKeyInput, createApiKeyOutput, revokeApiKeyInput, revokeApiKeyOutput } from "../api-keys/api-keys.contracts";
-import { clientWorkspaceOutput, clientListInput, clientListOutput, clientDetailOutput, statusHistoryOutput, duplicateCheckInput, duplicateCheckOutput, createClientInput, updateClientInput, assignOwnerInput, setStatusInput, convertClientInput } from "../clients/clients.contracts";
+import { clientWorkspaceInput, clientWorkspaceOutput, clientListInput, clientListOutput, clientDetailOutput, statusHistoryOutput, duplicateCheckInput, duplicateCheckOutput, createClientInput, updateClientInput, assignOwnerInput, setStatusInput, convertClientInput } from "../clients/clients.contracts";
 import { clientRefInput } from "../programs/../clients/clients.contracts";
 import { companyListInput, companyListOutput, companyIdInput, companyDetailOutput, companyOptionsInput, companyOptionOutput, companyCreateInput, companySummaryOutput, companyUpdateArgs, companyArchiveResultOutput, companyBulkOwnerInput, companyBulkResultOutput, companyBulkInput, companyEnrichOutput, companyResearchOutput, setPrimaryContactInput, companySetPrimaryContactOutput } from "../companies/companies.contracts";
 import { contactListInput, contactListOutput, contactIdInput, contactByIdOutput, contactCreateInput, contactBasicOutput, contactUpdateArgs, contactNameOutput, contactEnrichOutput, contactBulkOwnerInput, bulkResultOutput, contactBulkCompanyInput, contactBulkInput, factDecisionInput, decideFactOutput } from "../contacts/contacts.contracts";
@@ -26,15 +26,17 @@ import { dashboardSummaryInput, dashboardSummaryOutput } from "../dashboard/dash
 import { dealListInput, dealListOutput, dealIdInput, dealDetailOutput, dealCreateInput, dealCreateOutput, dealUpdateArgs, dealMutateOutput, setStageInput, dealSetStageOutput, dealContactsInput, dealContactOptionsOutput, dealAttachContactInput, dealContactLinkOutput, dealDetachContactInput, dealContactRoleInput, dealContactRoleOutput, dealBulkOwnerInput, dealBulkResultOutput, dealBulkStageInput, dealBulkInput } from "../deals/deals.contracts";
 import { depositWorkspaceOutput, depositListInput, depositListOutput, clientLedgerInput, clientLedgerOutput, recordDepositInput, depositRowOutput, verifyDepositInput } from "../deposits/deposits.contracts";
 import { enrichmentQueueInput } from "@crm/validation/enrichment-queue";
+import { eventsForClientInput, eventsForClientOutput, createEventInput, eventOutput, updateEventInput, cancelEventInput, respondToEventInput, busyRangesInput, busyRangesOutput } from "../events/events.contracts";
 import { fieldListInput, fieldListOutput, fieldByKeyInput, serializedFieldOutput, fieldEntityInput, fieldFiltersOutput, fieldIdInput, fieldCoverageOutput, fieldCreateInput, fieldUpdateArgs, fieldReorderInput, fieldReorderOutput, fieldDeleteOutput, fieldBackfillOutput } from "../fields/fields.contracts";
 import { googleConnectionStatusOutput, setAutoCreateInput, suppressDomainInput, suppressDomainOutput, threadInput, emailThreadOutput, calendarEventInput, calendarEventOutput } from "../google/google.contracts";
 import { purgeSyncedDataOutput, revokeAccessOutput, microsoftConnectionStatusOutput, setOutlookAutoCreateInput } from "../microsoft/microsoft.contracts";
+import { overviewInput, overviewOutput } from "../overview/overview.contracts";
 import { programWorkspaceOutput, programListInput, programListOutput, programOptionsOutput, createProgramInput, programOutput, updateProgramInput, clientEnrollmentsOutput, enrollInput, enrollmentOutput, moveEnrollmentInput, reassignMentorInput } from "../programs/programs.contracts";
 import { savedViewListInput, savedViewListOutput, savedViewCreateInput, savedViewOutput, savedViewUpdateArgs, savedViewIdInput, savedViewDeleteOutput } from "../saved-views/saved-views.contracts";
 import { agentModelOutput, modelCatalogOutput, setAgentModelInput, researchKeyOutput, setResearchKeyInput, archiveRetentionOutput, setArchiveRetentionDaysInput } from "../settings/settings.contracts";
 import { slackStatusOutput, slackMatchesOutput, slackChannelsInput, slackChannelsOutput, slackJoinChannelInput, slackJoinChannelOutput, slackRefreshPeopleOutput, slackCreateChannelInput, slackCreateChannelOutput, slackDisconnectOutput } from "../slack/slack.contracts";
 import { ssoSignInOptionsOutput, ssoSettingsOutput, ssoProviderListInput, ssoProviderListOutput, registerSsoProviderInput, ssoProviderOutput, deleteSsoProviderInput, deleteSsoProviderOutput } from "../sso/sso.contracts";
-import { staffMeOutput, staffListInput, staffListOutput, setStaffRoleInput, staffMemberOutput, setStaffActiveInput, assignTeamInput, updateMeInput, teamListOutput, createTeamInput, teamOutput, updateTeamInput } from "../staff/staff.contracts";
+import { staffMeOutput, staffListInput, staffListOutput, setStaffRoleInput, staffMemberOutput, setStaffActiveInput, assignTeamInput, updateMeInput, teamListOutput, setStaffVerticalsInput, createTeamInput, teamOutput, updateTeamInput } from "../staff/staff.contracts";
 import { trackingSettingsOutput, trackingFlagInput, cookieLifetimeInput, addDomainInput, trackedDomainOutput, removeDomainInput, rotateSiteIdOutput, verifyInput, verifyOutput, sourcesOutput, companyActivityInput, websiteActivityOutput, contactActivityInput } from "../tracking/tracking.contracts";
 import { workspaceOutput, memberListInput, memberListOutput, updateWorkspaceInput, setMemberRoleInput, workspaceMemberOutput } from "../workspace/workspace.contracts";
 import type { UsersRouter } from "../users/users.router";
@@ -147,6 +149,7 @@ const appRouter = t.router({
     }),
   clients: t.router({
     workspace: publicProcedure
+      .input(clientWorkspaceInput)
       .output(clientWorkspaceOutput)
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
     list: publicProcedure
@@ -553,6 +556,32 @@ const appRouter = t.router({
 }))
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  events: t.router({
+    forClient: publicProcedure
+      .input(eventsForClientInput)
+      .output(eventsForClientOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    create: publicProcedure
+      .input(createEventInput)
+      .output(eventOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    update: publicProcedure
+      .input(updateEventInput)
+      .output(eventOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    cancel: publicProcedure
+      .input(cancelEventInput)
+      .output(eventOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    respond: publicProcedure
+      .input(respondToEventInput)
+      .output(eventOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    busy: publicProcedure
+      .input(busyRangesInput)
+      .output(busyRangesOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   fields: t.router({
     list: publicProcedure
       .input(fieldListInput)
@@ -647,6 +676,12 @@ const appRouter = t.router({
       .output(microsoftConnectionStatusOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  overview: t.router({
+    summary: publicProcedure
+      .input(overviewInput)
+      .output(overviewOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   programs: t.router({
     workspace: publicProcedure
       .output(programWorkspaceOutput)
@@ -705,7 +740,7 @@ const appRouter = t.router({
     quick: publicProcedure
       .input(z.object({ q: z.string().default("") }))
       .output(z.object({ hits: z.array(z.object({
-	kind: z.enum(["company", "contact", "deal"]),
+	kind: z.enum(["client", "company", "contact", "deal"]),
 	id: z.string(),
 	label: z.string(),
 	detail: z.string().nullable(),
@@ -732,6 +767,9 @@ const appRouter = t.router({
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
     setResearchKey: publicProcedure
       .input(setResearchKeyInput)
+      .output(researchKeyOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    deferResearchKey: publicProcedure
       .output(researchKeyOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
     archiveRetention: publicProcedure
@@ -815,6 +853,10 @@ const appRouter = t.router({
     teams: publicProcedure
       .output(teamListOutput)
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    setVerticals: publicProcedure
+      .input(setStaffVerticalsInput)
+      .output(staffMemberOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
     createTeam: publicProcedure
       .input(createTeamInput)
       .output(teamOutput)
