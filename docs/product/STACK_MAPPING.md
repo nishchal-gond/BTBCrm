@@ -133,6 +133,10 @@ The order in `PRODUCT_ARCHITECTURE.md` §12, with the base taken into account.
    constraints and triggers. tRPC: list with scope, get, create, update, the
    three ownership procedures, status transitions. UI: Leads, Clients and
    Students as three views of one table, the client detail sheet with tabs.
+   **Schema built.** `Client`, `ClientStatusHistory`, `staffProfile.verticals`,
+   seven check constraints and five triggers. The procedures and the screens
+   are not built. The business line lives on `client.vertical` from the first
+   migration — see [VERTICALS.md](VERTICALS.md).
 4. **Deposits ledger.** Model, view, record and adjustment procedures, per-client
    and global ledger screens.
 5. **Programs and enrollments.**

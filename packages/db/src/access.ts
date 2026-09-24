@@ -1,5 +1,14 @@
 import type { Db } from "./client";
-import type { StaffRole } from "./generated/prisma/enums";
+import type { StaffRole, Vertical } from "./generated/prisma/enums";
+
+export const VERTICALS = [
+	"ACADEMY",
+	"REAL_ESTATE",
+] as const satisfies readonly Vertical[];
+
+export function isVertical(value: string): value is Vertical {
+	return (VERTICALS as readonly string[]).includes(value);
+}
 
 export const STAFF_ROLES = [
 	"ADMIN",
@@ -87,6 +96,7 @@ const MATRIX = {
 export type Actor = {
 	userId: string;
 	role: StaffRole;
+	verticals: readonly Vertical[];
 	teamId: string | null;
 	managedTeamIds: readonly string[];
 	managedUserIds: readonly string[];
@@ -108,7 +118,7 @@ export async function loadActor(
 ): Promise<Actor | null> {
 	const profile = await db.staffProfile.findUnique({
 		where: { userId },
-		select: { role: true, teamId: true, isActive: true },
+		select: { role: true, verticals: true, teamId: true, isActive: true },
 	});
 
 	if (!profile?.isActive) return null;
@@ -136,6 +146,7 @@ export async function loadActor(
 	return {
 		userId,
 		role: profile.role,
+		verticals: profile.role === "ADMIN" ? VERTICALS : profile.verticals,
 		teamId: profile.teamId,
 		managedTeamIds: teams.map((team) => team.id),
 		managedUserIds: [...managedUserIds],
@@ -143,9 +154,18 @@ export async function loadActor(
 }
 
 export type OwnedRow = {
+	vertical: Vertical;
 	salesOwnerId: string | null;
 	mentorOwnerId: string | null;
 };
+
+export function verticalsOf(actor: Actor): readonly Vertical[] {
+	return actor.role === "ADMIN" ? VERTICALS : actor.verticals;
+}
+
+export function canAccessVertical(actor: Actor, vertical: Vertical): boolean {
+	return verticalsOf(actor).includes(vertical);
+}
 
 function ownsOrManages(actor: Actor, ownerId: string | null): boolean {
 	if (ownerId === null) return false;
@@ -157,6 +177,8 @@ export function seesEveryClient(actor: Actor): boolean {
 }
 
 export function canAccessClient(actor: Actor, row: OwnedRow): boolean {
+	if (!canAccessVertical(actor, row.vertical)) return false;
+
 	return (
 		seesEveryClient(actor) ||
 		ownsOrManages(actor, row.salesOwnerId) ||
@@ -165,6 +187,8 @@ export function canAccessClient(actor: Actor, row: OwnedRow): boolean {
 }
 
 export function canEditClient(actor: Actor, row: OwnedRow): boolean {
+	if (!canAccessVertical(actor, row.vertical)) return false;
+
 	return (
 		actor.role === "ADMIN" ||
 		ownsOrManages(actor, row.salesOwnerId) ||
@@ -173,6 +197,7 @@ export function canEditClient(actor: Actor, row: OwnedRow): boolean {
 }
 
 export function canAccessFinancials(actor: Actor, row: OwnedRow): boolean {
+	if (!canAccessVertical(actor, row.vertical)) return false;
 	if (seesEveryClient(actor)) return true;
 	if (isMentorSide(actor.role)) return false;
 	return ownsOrManages(actor, row.salesOwnerId);
@@ -181,4 +206,31 @@ export function canAccessFinancials(actor: Actor, row: OwnedRow): boolean {
 export function visibleOwnerIds(actor: Actor): readonly string[] | null {
 	if (seesEveryClient(actor)) return null;
 	return [actor.userId, ...actor.managedUserIds];
+}
+
+export type ClientScope = {
+	vertical: { in: Vertical[] };
+	OR?: [
+		{ salesOwnerId: { in: string[] } },
+		{ mentorOwnerId: { in: string[] } },
+	];
+};
+
+export function clientScope(actor: Actor, vertical?: Vertical): ClientScope {
+	const allowed = vertical
+		? verticalsOf(actor).filter((one) => one === vertical)
+		: verticalsOf(actor);
+
+	const scope: ClientScope = { vertical: { in: [...allowed] } };
+	const owners = visibleOwnerIds(actor);
+
+	if (owners === null) return scope;
+
+	return {
+		...scope,
+		OR: [
+			{ salesOwnerId: { in: [...owners] } },
+			{ mentorOwnerId: { in: [...owners] } },
+		],
+	};
 }

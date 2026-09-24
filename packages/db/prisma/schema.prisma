@@ -1617,19 +1617,97 @@ model Team {
 }
 
 model StaffProfile {
-  userId       String    @id
-  user         User      @relation(fields: [userId], references: [id], onDelete: Restrict)
-  role         StaffRole @default(SALES)
+  userId       String     @id
+  user         User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         StaffRole  @default(SALES)
+  verticals    Vertical[] @default([ACADEMY])
   teamId       String?
-  team         Team?     @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
-  timezone     String    @default("Asia/Dubai")
+  team         Team?      @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  timezone     String     @default("Asia/Dubai")
   phone        String?
-  isActive     Boolean   @default(true)
-  managedTeams Team[]    @relation("TeamManager")
-  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  isActive     Boolean    @default(true)
+  managedTeams Team[]     @relation("TeamManager")
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+
+  createdClients     Client[]              @relation("ClientCreator")
+  salesOwnedClients  Client[]              @relation("ClientSalesOwner")
+  mentorOwnedClients Client[]              @relation("ClientMentorOwner")
+  convertedClients   Client[]              @relation("ClientConverter")
+  clientStatusEdits  ClientStatusHistory[] @relation("ClientStatusChanger")
 
   @@index([role, isActive])
   @@index([teamId])
   @@map("staffProfile")
+}
+
+enum Vertical {
+  ACADEMY
+  REAL_ESTATE
+}
+
+enum ClientStatus {
+  LEAD
+  QUALIFIED
+  MENTOR_ASSIGNED
+  CONVERTED
+  STUDENT
+  LOST
+  DORMANT
+}
+
+model Client {
+  id             String        @id @default(cuid())
+  clientRef      String        @unique @default(dbgenerated("('CL-' || lpad((nextval('client_ref_seq'::regclass))::text, 6, '0'::text))"))
+  vertical       Vertical      @default(ACADEMY)
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  emailNorm      String?
+  phoneNorm      String?
+  country        String?
+  city           String?
+  status         ClientStatus  @default(LEAD)
+  source         String?
+  createdById    String
+  createdBy      StaffProfile  @relation("ClientCreator", fields: [createdById], references: [userId], onDelete: Restrict)
+  salesOwnerId   String?
+  salesOwner     StaffProfile? @relation("ClientSalesOwner", fields: [salesOwnerId], references: [userId], onDelete: SetNull)
+  mentorOwnerId  String?
+  mentorOwner    StaffProfile? @relation("ClientMentorOwner", fields: [mentorOwnerId], references: [userId], onDelete: SetNull)
+  convertedById  String?
+  convertedBy    StaffProfile? @relation("ClientConverter", fields: [convertedById], references: [userId], onDelete: SetNull)
+  convertedAt    DateTime?     @db.Timestamptz(3)
+  lastActivityAt DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  statusHistory ClientStatusHistory[]
+
+  @@unique([emailNorm], map: "client_emailNorm_active_key", where: { emailNorm: { not: null }, status: { not: "LOST" } })
+  @@unique([phoneNorm], map: "client_phoneNorm_active_key", where: { phoneNorm: { not: null }, status: { not: "LOST" } })
+  @@index([salesOwnerId])
+  @@index([mentorOwnerId])
+  @@index([createdById])
+  @@index([vertical, status, createdAt(sort: Desc)])
+  @@index([vertical, salesOwnerId, status, lastActivityAt(sort: Desc)])
+  @@index([vertical, createdAt], map: "client_unassigned_idx", where: { salesOwnerId: null })
+  @@map("client")
+}
+
+model ClientStatusHistory {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  fromStatus  ClientStatus?
+  toStatus    ClientStatus
+  reason      String?
+  changedById String?
+  changedBy   StaffProfile? @relation("ClientStatusChanger", fields: [changedById], references: [userId], onDelete: SetNull)
+  changedAt   DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([clientId, changedAt(sort: Desc)])
+  @@index([changedById])
+  @@map("clientStatusHistory")
 }
