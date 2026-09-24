@@ -120,6 +120,7 @@ export type DataTableProps<TRow, TSub> = {
 	search?: ReactNode;
 	meta?: ReactNode;
 	empty?: ReactNode;
+	cards?: (row: TRow) => ReactNode;
 	className?: string;
 	tableClassName?: string;
 };
@@ -274,6 +275,7 @@ export function DataTable<TRow, TSub = unknown>({
 	facets,
 	tabs,
 	onRowClick,
+	cards,
 	onRowHover,
 	expandable,
 	selection,
@@ -342,7 +344,6 @@ export function DataTable<TRow, TSub = unknown>({
 		sortableColumns.length > 0 ||
 		anyExpandable ||
 		hideable.length > 0 ||
-		actions != null ||
 		leadingActions != null;
 	const activeFacetFilterCount = availableFacets.filter(
 		(facet) => (query.filters[facet.id]?.length ?? 0) > 0,
@@ -567,17 +568,38 @@ export function DataTable<TRow, TSub = unknown>({
 								</DropdownMenuContent>
 							</DropdownMenu>
 						)}
-						{actions}
 					</div>
 				</div>
+				<div className="flex flex-wrap gap-2 sm:w-auto sm:self-end lg:contents">
+					{actions}
+				</div>
 			</div>
+
+			{cards ? (
+				<div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-card lg:hidden">
+					{deferredRows.length === 0 ? (
+						<div className="flex items-center justify-center px-4 py-8 text-center text-muted-foreground">
+							{loading ? <Spinner /> : (empty ?? "No results found.")}
+						</div>
+					) : (
+						<ul className="flex flex-col divide-y divide-subtle">
+							{deferredRows.map((row) => (
+								<li key={getRowId(row)}>{cards(row)}</li>
+							))}
+						</ul>
+					)}
+				</div>
+			) : null}
 
 			<Table
 				className={cn(
 					"table-fixed [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4",
 					tableClassName,
 				)}
-				containerClassName="min-h-0 flex-1 overflow-auto rounded-lg border bg-card"
+				containerClassName={cn(
+					"min-h-0 flex-1 overflow-auto rounded-lg border bg-card",
+					cards && "hidden lg:block",
+				)}
 				overlay={
 					deferredRows.length === 0 ? (
 						<div className="absolute inset-x-0 top-11 bottom-0 flex items-center justify-center px-4 py-8 text-center text-muted-foreground">
@@ -690,7 +712,7 @@ export function DataTable<TRow, TSub = unknown>({
 								>
 									{selection && (
 										<TableCell
-											className={cn("w-10 px-3 py-3", HIDE_BELOW_CLASS.sm)}
+											className={cn("w-10 px-3 py-2", HIDE_BELOW_CLASS.sm)}
 											onClick={(event) => event.stopPropagation()}
 										>
 											<Checkbox
@@ -707,7 +729,7 @@ export function DataTable<TRow, TSub = unknown>({
 										</TableCell>
 									)}
 									{anyExpandable && (
-										<TableCell className="w-10 px-3 py-3 text-center text-muted-foreground">
+										<TableCell className="w-10 px-3 py-2 text-center text-muted-foreground">
 											{canExpand && (
 												<ChevronRight
 													size={12}
@@ -723,7 +745,7 @@ export function DataTable<TRow, TSub = unknown>({
 										<TableCell
 											key={column.id}
 											className={cn(
-												"overflow-hidden px-3 py-3",
+												"overflow-hidden px-3 py-2",
 												column.width,
 												ALIGN_CLASS[column.align ?? "left"],
 												column.hideBelow && HIDE_BELOW_CLASS[column.hideBelow],

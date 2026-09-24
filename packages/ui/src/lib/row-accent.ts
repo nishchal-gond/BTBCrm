@@ -9,13 +9,13 @@ const BAR = [
 export const ROW_ACCENT = [
 	"cursor-pointer",
 	BAR,
-	"[&>td:first-child]:transition-[padding] [&>td:first-child]:duration-200 [&>td:first-child]:ease-out",
+	"[&>td:first-child]:transition-[padding] [&>td:first-child]:duration-[var(--dur-fast)] [&>td:first-child]:ease-out",
 	"[&:hover>td:first-child]:pl-5",
 ].join(" ");
 
 export const ROW_ACCENT_EXPANDABLE = [
 	"cursor-pointer",
 	BAR,
-	"[&>td:nth-child(2)]:transition-[padding] [&>td:nth-child(2)]:duration-200 [&>td:nth-child(2)]:ease-out",
+	"[&>td:nth-child(2)]:transition-[padding] [&>td:nth-child(2)]:duration-[var(--dur-fast)] [&>td:nth-child(2)]:ease-out",
 	"[&:hover>td:nth-child(2)]:pl-5",
 ].join(" ");

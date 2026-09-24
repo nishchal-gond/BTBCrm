@@ -3,8 +3,11 @@
 import Building from "@carbon/icons-react/es/Building";
 import Close from "@carbon/icons-react/es/Close";
 import Dashboard from "@carbon/icons-react/es/Dashboard";
+import Education from "@carbon/icons-react/es/Education";
+import Identification from "@carbon/icons-react/es/Identification";
 import Partnership from "@carbon/icons-react/es/Partnership";
 import Settings from "@carbon/icons-react/es/Settings";
+import UserFollow from "@carbon/icons-react/es/UserFollow";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
 import { Button } from "@crm/ui/components/button";
 import type { CarbonIcon } from "@crm/ui/components/icon";
@@ -49,6 +52,14 @@ const ITEMS: RailItem[] = [
 		match: "prefix",
 		related: ["/agents"],
 	},
+	{ title: "Leads", href: "/leads", icon: UserFollow, match: "prefix" },
+	{
+		title: "Clients",
+		href: "/clients",
+		icon: Identification,
+		match: "prefix",
+	},
+	{ title: "Students", href: "/students", icon: Education, match: "prefix" },
 	{ title: "Companies", href: "/companies", icon: Building, match: "prefix" },
 	{
 		title: "Contacts",
