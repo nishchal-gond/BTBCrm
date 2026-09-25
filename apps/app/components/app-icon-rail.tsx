@@ -2,10 +2,16 @@
 
 import Building from "@carbon/icons-react/es/Building";
 import Close from "@carbon/icons-react/es/Close";
+import Course from "@carbon/icons-react/es/Course";
 import Dashboard from "@carbon/icons-react/es/Dashboard";
+import Education from "@carbon/icons-react/es/Education";
+import Identification from "@carbon/icons-react/es/Identification";
+import Money from "@carbon/icons-react/es/Money";
 import Partnership from "@carbon/icons-react/es/Partnership";
 import Settings from "@carbon/icons-react/es/Settings";
+import UserFollow from "@carbon/icons-react/es/UserFollow";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
+import type { Capability } from "@crm/db/access";
 import { Button } from "@crm/ui/components/button";
 import type { CarbonIcon } from "@crm/ui/components/icon";
 import { Icon } from "@crm/ui/components/icon";
@@ -22,12 +28,20 @@ import {
 	TooltipTrigger,
 } from "@crm/ui/components/tooltip";
 import { cn } from "@crm/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { AgentBuilderSidebar } from "@/components/agent-builder/agent-builder-sidebar";
 import { usePrefetchSection } from "@/components/crm/section-prefetch";
 import { useMobileNav } from "@/components/mobile-nav";
+import {
+	BUSINESS_LINE_PARAM,
+	type BusinessLine,
+	DEFAULT_BUSINESS_LINE,
+} from "@/lib/business-line";
+import { useTRPC } from "@/lib/trpc/client";
+import { useBusinessLine } from "@/lib/use-business-line";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 
 type RailItem = {
@@ -37,6 +51,9 @@ type RailItem = {
 	iconClassName?: string;
 	match: "exact" | "prefix";
 	related?: string[];
+	lines?: readonly BusinessLine[];
+	capability?: Capability;
+	keepsLine?: boolean;
 };
 
 const ITEMS: RailItem[] = [
@@ -49,6 +66,42 @@ const ITEMS: RailItem[] = [
 		match: "prefix",
 		related: ["/agents"],
 	},
+	{
+		title: "Leads",
+		href: "/leads",
+		icon: UserFollow,
+		match: "prefix",
+		keepsLine: true,
+	},
+	{
+		title: "Clients",
+		href: "/clients",
+		icon: Identification,
+		match: "prefix",
+		keepsLine: true,
+	},
+	{
+		title: "Students",
+		href: "/students",
+		icon: Education,
+		match: "prefix",
+		lines: ["ACADEMY"],
+	},
+	{
+		title: "Deposits",
+		href: "/deposits",
+		icon: Money,
+		match: "prefix",
+		capability: "deposits.view",
+		keepsLine: true,
+	},
+	{
+		title: "Programmes",
+		href: "/programs",
+		icon: Course,
+		match: "prefix",
+		lines: ["ACADEMY"],
+	},
 	{ title: "Companies", href: "/companies", icon: Building, match: "prefix" },
 	{
 		title: "Contacts",
@@ -60,10 +113,12 @@ const ITEMS: RailItem[] = [
 	{ title: "Settings", href: "/settings", icon: Settings, match: "prefix" },
 ];
 
-function isActive(item: RailItem, pathname: string): boolean {
+type RailLinkItem = RailItem & { path: string; section: string };
+
+function isActive(item: RailLinkItem, pathname: string): boolean {
 	return (
-		pathname === item.href ||
-		(item.match === "prefix" && pathname.startsWith(item.href)) ||
+		pathname === item.path ||
+		(item.match === "prefix" && pathname.startsWith(item.path)) ||
 		Boolean(item.related?.some((prefix) => pathname.startsWith(prefix)))
 	);
 }
@@ -73,7 +128,7 @@ function RailLink({
 	active,
 	onPrefetch,
 }: {
-	item: RailItem;
+	item: RailLinkItem;
 	active: boolean;
 	onPrefetch: () => void;
 }) {
@@ -114,7 +169,7 @@ function MobileRailLink({
 	onNavigate,
 	onPrefetch,
 }: {
-	item: RailItem;
+	item: RailLinkItem;
 	active: boolean;
 	onNavigate: () => void;
 	onPrefetch: () => void;
@@ -153,7 +208,7 @@ function MobileRailIconLink({
 	onNavigate,
 	onPrefetch,
 }: {
-	item: RailItem;
+	item: RailLinkItem;
 	active: boolean;
 	onNavigate: () => void;
 	onPrefetch: () => void;
@@ -191,7 +246,7 @@ export function AppIconRailFallback() {
 			aria-busy="true"
 			className="hidden w-14 shrink-0 flex-col items-center gap-1 border-r py-3 md:flex [view-transition-name:app-rail]"
 		>
-			{ITEMS.map((item) => (
+			{ITEMS.filter((item) => item.capability === undefined).map((item) => (
 				<Button
 					key={item.href}
 					variant="ghost"
@@ -210,19 +265,35 @@ export function AppIconRailFallback() {
 export function AppIconRail() {
 	const pathname = usePathname();
 	const workspaceUrl = useWorkspaceUrl();
+	const trpc = useTRPC();
 	const { open, setOpen } = useMobileNav();
 	const prefetchSection = usePrefetchSection();
 
-	const items = useMemo(
-		() =>
-			ITEMS.map((item) => ({
+	const me = useQuery(trpc.staff.me.queryOptions());
+	const [line] = useBusinessLine(me.data?.verticals ?? []);
+
+	const items = useMemo(() => {
+		const held = new Set(me.data?.capabilities ?? []);
+		const suffix =
+			line === DEFAULT_BUSINESS_LINE ? "" : `?${BUSINESS_LINE_PARAM}=${line}`;
+
+		return ITEMS.filter((item) => {
+			if (item.lines && !item.lines.includes(line)) return false;
+			if (item.capability && me.data && !held.has(item.capability))
+				return false;
+			return true;
+		}).map((item) => {
+			const path = workspaceUrl(item.href);
+
+			return {
 				...item,
 				section: item.href,
-				href: workspaceUrl(item.href),
-				related: item.related?.map((path) => workspaceUrl(path)),
-			})),
-		[workspaceUrl],
-	);
+				path,
+				href: `${path}${item.keepsLine ? suffix : ""}`,
+				related: item.related?.map((one) => workspaceUrl(one)),
+			};
+		});
+	}, [workspaceUrl, me.data, line]);
 	const inChat = items.some(
 		(item) => item.title === "Chat" && isActive(item, pathname),
 	);

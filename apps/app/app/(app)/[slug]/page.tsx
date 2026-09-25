@@ -1,44 +1,36 @@
 import { Suspense } from "react";
 import {
 	PageShell,
-	PageShellActions,
 	PageShellContent,
+	PageShellDescription,
 	PageShellHeader,
 	PageShellHeading,
-	PageShellLoading,
+	PageShellTitle,
 } from "@/components/page-shell";
+import { ListFallback } from "@/components/skeletons";
+import { BUSINESS_LINES, readBusinessLine } from "@/lib/business-line";
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
-import { DashboardSummary } from "./dashboard-summary";
-import {
-	OverviewGreeting,
-	OverviewGreetingFallback,
-} from "./overview-greeting";
-import {
-	OverviewScopeToggle,
-	OverviewScopeToggleFallback,
-} from "./overview-scope";
-import { loadOverviewSearchParams } from "./overview-search-params";
+import { PipelineOverview } from "./pipeline-overview";
+
+export const instant = false;
 
 export default function OverviewPage({ searchParams }: PageProps<"/[slug]">) {
 	return (
 		<PageShell>
 			<PageShellHeader>
 				<PageShellHeading>
-					<Suspense fallback={<OverviewGreetingFallback />}>
-						<OverviewGreeting />
-					</Suspense>
+					<PageShellTitle>Today</PageShellTitle>
+					<PageShellDescription>
+						Where the book stands, what is waiting on you, and what is booked
+						next.
+					</PageShellDescription>
 				</PageShellHeading>
-				<PageShellActions>
-					<Suspense fallback={<OverviewScopeToggleFallback />}>
-						<OverviewScopeToggle />
-					</Suspense>
-				</PageShellActions>
 			</PageShellHeader>
 
 			<PageShellContent>
-				<Suspense fallback={<PageShellLoading />}>
+				<Suspense fallback={<ListFallback rows={5} />}>
 					<Summary searchParams={searchParams} />
 				</Suspense>
 			</PageShellContent>
@@ -49,19 +41,18 @@ export default function OverviewPage({ searchParams }: PageProps<"/[slug]">) {
 async function Summary({
 	searchParams,
 }: Pick<PageProps<"/[slug]">, "searchParams">) {
-	const [, { scope }] = await Promise.all([
-		requireSession(),
-		loadOverviewSearchParams(searchParams),
-	]);
+	await requireSession();
 
+	const wanted = readBusinessLine(await searchParams, BUSINESS_LINES);
 	const queryClient = getServerQueryClient();
+
 	await queryClient.prefetchQuery(
-		getServerTrpc().dashboard.summary.queryOptions({ scope }),
+		getServerTrpc().overview.summary.queryOptions({ vertical: wanted }),
 	);
 
 	return (
 		<HydrateClient>
-			<DashboardSummary />
+			<PipelineOverview />
 		</HydrateClient>
 	);
 }

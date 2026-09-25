@@ -57,8 +57,8 @@ export function CreateChannelDialog({
 				<DialogHeader>
 					<DialogTitle>Create a channel</DialogTitle>
 					<DialogDescription>
-						Trading Academy CRM makes it in Slack and joins it. You can put the agent in it
-						straight after.
+						Trading Academy CRM makes it in Slack and joins it. You can put the
+						agent in it straight after.
 					</DialogDescription>
 				</DialogHeader>
 

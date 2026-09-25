@@ -47,7 +47,7 @@ export function ResearchKey() {
 
 	if (!key.data) return null;
 
-	const { configured, hint } = key.data;
+	const { configured, hint, canManage } = key.data;
 
 	return (
 		<Card>
@@ -62,7 +62,7 @@ export function ResearchKey() {
 					<Button
 						type="submit"
 						form="research-key"
-						disabled={save.isPending || draft.trim() === ""}
+						disabled={!canManage || save.isPending || draft.trim() === ""}
 					>
 						{save.isPending ? <Spinner data-icon="inline-start" /> : null}
 						{configured ? "Replace key" : "Save key"}
@@ -98,9 +98,14 @@ export function ResearchKey() {
 								autoCapitalize="off"
 								autoCorrect="off"
 								spellCheck={false}
-								disabled={save.isPending}
+								disabled={!canManage || save.isPending}
 							/>
 							<FieldDescription>
+								{canManage ? null : (
+									<span className="block">
+										Only an owner or an admin changes this key.
+									</span>
+								)}
 								Don't have a Context API key?{" "}
 								<a
 									href={CONTEXT_DEV_SIGNUP_URL}

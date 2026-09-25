@@ -33,7 +33,9 @@ export type ModelCatalogResult = z.infer<typeof modelCatalogOutput>;
 
 export const researchKeyOutput = z.object({
 	configured: z.boolean(),
+	deferred: z.boolean(),
 	hint: z.string().nullable(),
+	canManage: z.boolean(),
 });
 
 export type ResearchKeySettings = z.infer<typeof researchKeyOutput>;

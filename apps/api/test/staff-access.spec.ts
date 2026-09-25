@@ -1,14 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import type { Db, StaffRole } from "@crm/db";
+import type { Db, StaffRole, Vertical } from "@crm/db";
 import {
 	type Actor,
 	type ActorReader,
 	can,
 	canAccessClient,
 	canAccessFinancials,
+	canAccessVertical,
 	canEditClient,
 	capabilitiesOf,
+	clientScope,
 	loadActor,
+	verticalsOf,
 	visibleOwnerIds,
 } from "@crm/db/access";
 import { ForbiddenException } from "@nestjs/common";
@@ -18,8 +21,16 @@ function actor(
 	role: StaffRole,
 	userId: string,
 	managedUserIds: string[] = [],
+	verticals: Vertical[] = ["ACADEMY"],
 ): Actor {
-	return { userId, role, teamId: null, managedTeamIds: [], managedUserIds };
+	return {
+		userId,
+		role,
+		verticals,
+		teamId: null,
+		managedTeamIds: [],
+		managedUserIds,
+	};
 }
 
 const admin = actor("ADMIN", "admin");
@@ -31,9 +42,29 @@ const mentorB = actor("MENTOR", "mentor_b");
 const salesLead = actor("SALES_MANAGER", "sales_lead", ["sales_a"]);
 const mentorLead = actor("MENTOR_MANAGER", "mentor_lead", ["mentor_a"]);
 
-const clientOfA = { salesOwnerId: "sales_a", mentorOwnerId: "mentor_a" };
-const leadOfA = { salesOwnerId: "sales_a", mentorOwnerId: null };
-const unassigned = { salesOwnerId: null, mentorOwnerId: null };
+const estateAgent = actor("SALES", "estate_a", [], ["REAL_ESTATE"]);
+const bothLines = actor("SALES", "both_a", [], ["ACADEMY", "REAL_ESTATE"]);
+
+const clientOfA = {
+	vertical: "ACADEMY" as const,
+	salesOwnerId: "sales_a",
+	mentorOwnerId: "mentor_a",
+};
+const leadOfA = {
+	vertical: "ACADEMY" as const,
+	salesOwnerId: "sales_a",
+	mentorOwnerId: null,
+};
+const unassigned = {
+	vertical: "ACADEMY" as const,
+	salesOwnerId: null,
+	mentorOwnerId: null,
+};
+const estateLeadOfA = {
+	vertical: "REAL_ESTATE" as const,
+	salesOwnerId: "sales_a",
+	mentorOwnerId: null,
+};
 
 describe("client visibility", () => {
 	it("shows a client to its sales owner and its mentor", () => {
@@ -66,6 +97,7 @@ describe("client visibility", () => {
 		expect(canAccessClient(mentorLead, leadOfA)).toBe(false);
 		expect(
 			canAccessClient(salesLead, {
+				vertical: "ACADEMY",
 				salesOwnerId: "sales_b",
 				mentorOwnerId: null,
 			}),
@@ -156,14 +188,19 @@ describe("loadActor", () => {
 	function reader(options: {
 		profile: {
 			role: StaffRole;
+			verticals?: Vertical[];
 			teamId: string | null;
 			isActive: boolean;
 		} | null;
 		teams: { id: string; members: { userId: string }[] }[];
 	}): ActorReader {
+		const profile = options.profile
+			? { verticals: ["ACADEMY"] as Vertical[], ...options.profile }
+			: null;
+
 		return {
 			staffProfile: {
-				findUnique: async () => options.profile,
+				findUnique: async () => profile,
 			},
 			team: {
 				findMany: async () => options.teams,
@@ -201,6 +238,7 @@ describe("loadActor", () => {
 		expect(actor).toEqual({
 			userId: "lead",
 			role: "SALES_MANAGER",
+			verticals: ["ACADEMY"],
 			teamId: "t1",
 			managedTeamIds: ["t1", "t2"],
 			managedUserIds: ["a", "b"],
@@ -213,6 +251,7 @@ describe("StaffService guards", () => {
 		userId: string;
 		role: StaffRole;
 		isActive: boolean;
+		verticals?: Vertical[];
 	};
 
 	type FakeWrite = Partial<Pick<FakeProfile, "role" | "isActive">>;
@@ -222,6 +261,7 @@ describe("StaffService guards", () => {
 
 		const row = (profile: FakeProfile) => ({
 			...profile,
+			verticals: profile.verticals ?? (["ACADEMY"] as Vertical[]),
 			timezone: "Asia/Dubai",
 			phone: null,
 			createdAt: new Date("2026-09-01T00:00:00Z"),
@@ -341,5 +381,112 @@ describe("StaffService guards", () => {
 
 		expect(updated.role).toBe("FINANCE");
 		expect(writes).toEqual([{ userId: "other", data: { role: "FINANCE" } }]);
+	});
+});
+
+describe("the vertical boundary", () => {
+	it("hides a client in a business line the person does not work in", () => {
+		expect(canAccessClient(salesA, estateLeadOfA)).toBe(false);
+		expect(canEditClient(salesA, estateLeadOfA)).toBe(false);
+		expect(canAccessFinancials(salesA, estateLeadOfA)).toBe(false);
+	});
+
+	it("shows the same client once the person works that line", () => {
+		expect(canAccessClient(bothLines, clientOfA)).toBe(false);
+		expect(
+			canAccessClient(bothLines, {
+				vertical: "REAL_ESTATE",
+				salesOwnerId: "both_a",
+				mentorOwnerId: null,
+			}),
+		).toBe(true);
+	});
+
+	it("stops ownership from crossing the boundary", () => {
+		expect(canAccessVertical(estateAgent, "ACADEMY")).toBe(false);
+		expect(
+			canAccessClient(estateAgent, {
+				vertical: "ACADEMY",
+				salesOwnerId: "estate_a",
+				mentorOwnerId: null,
+			}),
+		).toBe(false);
+	});
+
+	it("gives an admin every line without storing them", () => {
+		const bare = actor("ADMIN", "admin_bare", [], []);
+		expect(verticalsOf(bare)).toEqual(["ACADEMY", "REAL_ESTATE"]);
+		expect(canAccessVertical(bare, "REAL_ESTATE")).toBe(true);
+		expect(canAccessClient(bare, estateLeadOfA)).toBe(true);
+	});
+
+	it("does not widen finance past its own lines", () => {
+		expect(canAccessVertical(finance, "REAL_ESTATE")).toBe(false);
+		expect(canAccessClient(finance, estateLeadOfA)).toBe(false);
+		expect(canAccessClient(finance, clientOfA)).toBe(true);
+	});
+});
+
+describe("the client query scope", () => {
+	it("bounds a rep to their own rows inside their own lines", () => {
+		expect(clientScope(salesA)).toEqual({
+			vertical: { in: ["ACADEMY"] },
+			OR: [
+				{ salesOwnerId: { in: ["sales_a"] } },
+				{ mentorOwnerId: { in: ["sales_a"] } },
+			],
+		});
+	});
+
+	it("bounds an admin by line only", () => {
+		expect(clientScope(admin)).toEqual({
+			vertical: { in: ["ACADEMY", "REAL_ESTATE"] },
+		});
+	});
+
+	it("narrows to one line when one is asked for", () => {
+		expect(clientScope(admin, "REAL_ESTATE")).toEqual({
+			vertical: { in: ["REAL_ESTATE"] },
+		});
+	});
+
+	it("returns an empty line list when the person may not work that line", () => {
+		expect(clientScope(salesA, "REAL_ESTATE").vertical).toEqual({ in: [] });
+	});
+
+	it("carries the managed team into the owner list", () => {
+		expect(clientScope(salesLead).OR).toEqual([
+			{ salesOwnerId: { in: ["sales_lead", "sales_a"] } },
+			{ mentorOwnerId: { in: ["sales_lead", "sales_a"] } },
+		]);
+	});
+});
+
+describe("loading the lines a person works", () => {
+	function readerFor(role: StaffRole, verticals: Vertical[]): ActorReader {
+		return {
+			staffProfile: {
+				findUnique: async () => ({
+					role,
+					verticals,
+					teamId: null,
+					isActive: true,
+				}),
+			},
+			team: { findMany: async () => [] },
+		} as unknown as ActorReader;
+	}
+
+	it("reads them from the profile", async () => {
+		expect(
+			(await loadActor(readerFor("SALES", ["REAL_ESTATE"]), "u"))?.verticals,
+		).toEqual(["REAL_ESTATE"]);
+	});
+
+	it("gives an admin every line whatever the profile stores", async () => {
+		expect((await loadActor(readerFor("ADMIN", []), "u"))?.verticals).toEqual([
+			"ACADEMY",
+			"REAL_ESTATE",
+		]);
 	});
 });

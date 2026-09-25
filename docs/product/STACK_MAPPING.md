@@ -133,19 +133,50 @@ The order in `PRODUCT_ARCHITECTURE.md` §12, with the base taken into account.
    constraints and triggers. tRPC: list with scope, get, create, update, the
    three ownership procedures, status transitions. UI: Leads, Clients and
    Students as three views of one table, the client detail sheet with tabs.
+   **Schema built.** `Client`, `ClientStatusHistory`, `staffProfile.verticals`,
+   seven check constraints and five triggers. The procedures and the screens
+   are not built. The business line lives on `client.vertical` from the first
+   migration — see [VERTICALS.md](VERTICALS.md).
 4. **Deposits ledger.** Model, view, record and adjustment procedures, per-client
-   and global ledger screens.
-5. **Programs and enrollments.**
-6. **Company calendar.** `CompanyEvent`, occurrence expansion, month, week, day
-   and agenda views, filters, privacy between owners.
+   and global ledger screens. **Built.** `Deposit`, five check constraints and
+   three triggers, including one that refuses every update and one that refuses
+   every delete. Totals are derived by aggregate, not by the view §5.5 names —
+   Prisma maps views read-only behind a preview flag, and an aggregate carries
+   the same guarantee with no stored column anywhere.
+5. **Programs and enrollments.** **Built.** `Program` and `Enrollment`, one
+   *open* enrolment per client by a partial unique index keyed on a
+   trigger-maintained `closedAt`, so a paused enrolment still holds the slot.
+   `client_student_needs_enrollment` closes the `CONVERTED → STUDENT` gap: a
+   client becomes a student by enrolling, never on entry and never by a bare
+   status move. `enrollment_needs_converted_client` closes the other side.
+   Nothing here is deleted: `enrollment_no_delete`, `program_no_delete` and
+   `enrollment_guard_immutable` say so at the database.
+6. **Company calendar.** **Partly built.** `CompanyEvent` and
+   `CompanyEventAttendee` exist with their constraints and triggers, and the
+   `events.*` procedures cover a client's schedule, invitations, cancellation
+   and busy ranges. The client record's Schedule tab runs on them. The calendar
+   *module* — month, week, day and agenda views, filters, and RRULE occurrence
+   expansion — is not built, and the model carries no recurrence columns,
+   because a rule nothing expands is scaffolding. Adding them is a migration on
+   a small table when the views are built.
 7. **Tasks, sales team, mentors.**
-8. **Dashboard shell and KPIs.**
+8. **Dashboard shell and KPIs.** **Partly built.** `/[slug]` is the academy
+   overview: a KPI rail, needs-attention, what is booked next, where everybody
+   is, and the latest status moves, all scoped by `clientScope(actor)` as
+   `PERMISSIONS.md` §10 describes. The globe and the charts are not built. See
+   [adrs/overview-screen.md](../../adrs/overview-screen.md).
 9. **Globe.**
-10. **Users and roles admin, settings, audit log.**
-11. **Hardening.** Full permission suite, performance pass, visual pass,
-    Playwright.
+10. **Users and roles admin, settings, audit log.** `staff.setVerticals` exists
+    so an administrator can move somebody between business lines; the admin
+    screen does not.
+11. **Hardening.** **Partly built.** The permission suite is
+    `apps/app/e2e/permissions/`, five specs run against real sessions for each
+    seeded role, plus `apps/api/test/*.integration.spec.ts` at the service
+    level. Responsive and keyboard suites are `apps/app/e2e/responsive.e2e.ts`
+    and `keyboard.e2e.ts`. The performance pass is not done.
 12. **Retire the B2B modules.** Companies, deals, contacts and the agent
-    surfaces that depend on them, by ADR.
+    surfaces that depend on them, by ADR. The deals *dashboard* is already
+    retired — see [adrs/overview-screen.md](../../adrs/overview-screen.md).
 
 ## 7. Open decisions
 
@@ -154,12 +185,19 @@ Raise these. Do not pick silently.
 1. **Agent app in v1.** The specification excludes AI features. The base ships a
    research agent that is off without keys. Keep it dormant, or remove
    `apps/agent` and every surface that depends on it before the domain build?
+   The research **key** is settled: it is optional, and the onboarding step can
+   be deferred — see `docs/environment.md`.
 2. **Retirement timing for companies, contacts and deals.** Remove before
    building `Client`, so the domain is clean, or after, so the shell keeps a
    working reference during the build?
-3. **Client URL identifier.** `/clients/CL-000184` as the spec says, or the
-   cuid? The spec chose `clientRef` for operator usability.
-4. **Six roles or three.** The CRM-New build added `sales_manager`,
-   `mentor_manager` and `finance` to close the manager gap. `USER_ROLES.md`
-   still says three.
 5. **RLS as a second lock.** Whether to add per-request Postgres claims later.
+
+### Settled
+
+3. ~~**Client URL identifier.**~~ `clientRef`. `/clients/CL-000184` is the
+   route, the reference is copyable on every screen, and a non-owner opening it
+   gets a not-found page with the name nowhere in the body, the title or the
+   metadata — there is a test for exactly that.
+4. ~~**Six roles or three.**~~ Six. `PERMISSIONS.md` is rewritten against
+   `packages/db/src/access.ts`, and `USER_ROLES.md` carries the banner saying
+   the same. The sharpest consequence is that a mentor never sees money.

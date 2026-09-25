@@ -17,6 +17,8 @@ import { companiesSearchParams } from "./companies-search-params";
 import { CompaniesTable } from "./companies-table";
 import { CreateCompanySheet } from "./create-company-sheet";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Companies",
 };

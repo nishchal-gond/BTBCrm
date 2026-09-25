@@ -9,7 +9,6 @@ import {
 } from "@crm/ui/components/table";
 import {
 	ROW_ACCENT,
-	ROW_ACCENT_EXPANDABLE,
 } from "@crm/ui/lib/row-accent";
 import { cn } from "@crm/ui/lib/utils";
 import type { ComponentProps, ReactNode } from "react";
@@ -99,18 +98,16 @@ export function SimpleTable({
 
 export function SimpleTableRow({
 	clickable,
-	expandable,
 	className,
 	...props
 }: ComponentProps<typeof TableRow> & {
 	clickable?: boolean;
-	expandable?: boolean;
 }) {
 	return (
 		<TableRow
 			className={cn(
 				"hover:bg-transparent",
-				clickable && (expandable ? ROW_ACCENT_EXPANDABLE : ROW_ACCENT),
+				clickable && ROW_ACCENT,
 				className,
 			)}
 			{...props}

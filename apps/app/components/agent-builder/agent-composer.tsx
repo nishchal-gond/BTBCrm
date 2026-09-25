@@ -538,7 +538,6 @@ export function AgentComposer({
 						state.attachmentsReading ? "Preparing attachments" : "Send message"
 					}
 					onClick={submit}
-					className="rounded-full"
 				>
 					<AsyncButtonContent
 						status={state.attachmentsReading ? "pending" : submitAction.status}

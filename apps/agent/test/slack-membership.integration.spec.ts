@@ -8,6 +8,8 @@ const CHANNEL_ID = "CJOINSPEC1";
 const GRANT_ID = "slack-join-spec-grant";
 const INVENTORY_KIND = "slack-people-match";
 
+const JOIN_KIND = "slack-channel-join";
+
 const realFetch = globalThis.fetch;
 
 async function connect() {
@@ -53,15 +55,20 @@ function replies(reply: (url: string) => object) {
 }
 
 let inventoryTaskIds: string[] = [];
+let joinTaskIds: string[] = [];
 
 beforeEach(async () => {
 	requested.length = 0;
-	inventoryTaskIds = (
-		await db.agentTask.findMany({
-			where: { kind: INVENTORY_KIND },
-			select: { id: true },
-		})
-	).map((task) => task.id);
+	const existing = await db.agentTask.findMany({
+		where: { kind: { in: [INVENTORY_KIND, JOIN_KIND] } },
+		select: { id: true, kind: true },
+	});
+	inventoryTaskIds = existing
+		.filter((task) => task.kind === INVENTORY_KIND)
+		.map((task) => task.id);
+	joinTaskIds = existing
+		.filter((task) => task.kind === JOIN_KIND)
+		.map((task) => task.id);
 	await db.slackChannel.deleteMany({ where: { id: CHANNEL_ID } });
 	await connect();
 	await db.slackChannel.create({
@@ -81,6 +88,9 @@ afterEach(async () => {
 	await db.slackWorkspaceGrant.deleteMany({ where: { id: GRANT_ID } });
 	await db.agentTask.deleteMany({
 		where: { kind: INVENTORY_KIND, id: { notIn: inventoryTaskIds } },
+	});
+	await db.agentTask.deleteMany({
+		where: { kind: JOIN_KIND, id: { notIn: joinTaskIds } },
 	});
 	await db.account.deleteMany({ where: { id: ACCOUNT_ID } });
 	await db.user.deleteMany({ where: { id: USER_ID } });

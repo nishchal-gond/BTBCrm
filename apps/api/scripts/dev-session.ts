@@ -1,3 +1,4 @@
+import { ensureWorkspaceMembership } from "@crm/auth";
 import { AUTH_COOKIE_PREFIX } from "@crm/auth/cookies";
 import { db } from "@crm/db";
 
@@ -46,6 +47,8 @@ const user = await db.user.upsert({
 	},
 	update: {},
 });
+
+await ensureWorkspaceMembership(user.id);
 
 const token = `dev-session-${user.id}`;
 const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);

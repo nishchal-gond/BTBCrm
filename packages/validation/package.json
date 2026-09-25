@@ -15,7 +15,8 @@
 		"./field-backfill": "./src/field-backfill.ts",
 		"./field-templates": "./src/field-templates.ts",
 		"./saved-view": "./src/saved-view.ts",
-		"./time-zone": "./src/time-zone.ts"
+		"./time-zone": "./src/time-zone.ts",
+		"./zoned-time": "./src/zoned-time.ts"
 	},
 	"scripts": {
 		"check-types": "tsc --noEmit",
