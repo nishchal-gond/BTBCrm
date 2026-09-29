@@ -16,21 +16,32 @@ import { useId } from "react";
 import { toast } from "sonner";
 import { useTRPC } from "@/lib/trpc/client";
 
-export function ResearchForm() {
+export function ResearchForm({ canManage }: { canManage: boolean }) {
 	const trpc = useTRPC();
 	const router = useRouter();
 
 	const keyId = useId();
 
+	const onward = () => {
+		router.refresh();
+		router.replace("/");
+	};
+
 	const save = useMutation(
 		trpc.settings.setResearchKey.mutationOptions({
-			onSuccess: () => {
-				router.refresh();
-				router.replace("/");
-			},
+			onSuccess: onward,
 			onError: (error) => toast.error(error.message),
 		}),
 	);
+
+	const defer = useMutation(
+		trpc.settings.deferResearchKey.mutationOptions({
+			onSuccess: onward,
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const busy = save.isPending || defer.isPending;
 
 	return (
 		<form
@@ -55,6 +66,7 @@ export function ResearchForm() {
 						spellCheck={false}
 						autoFocus
 						required
+						disabled={!canManage || busy}
 					/>
 					<FieldDescription>
 						Don't have a Context API key?{" "}
@@ -70,10 +82,26 @@ export function ResearchForm() {
 				</Field>
 			</FieldGroup>
 
-			<Button type="submit" disabled={save.isPending}>
-				{save.isPending ? <Spinner data-icon="inline-start" /> : null}
-				Continue
-			</Button>
+			<div className="flex flex-col gap-3">
+				<Button type="submit" disabled={!canManage || busy}>
+					{save.isPending ? <Spinner data-icon="inline-start" /> : null}
+					Continue
+				</Button>
+				<Button
+					type="button"
+					variant="ghost"
+					disabled={!canManage || busy}
+					onClick={() => defer.mutate()}
+				>
+					{defer.isPending ? <Spinner data-icon="inline-start" /> : null}
+					Not now
+				</Button>
+				<p className="text-center text-muted-foreground text-xs">
+					{canManage
+						? "Company research stays off until a key is saved. Everything else in the CRM works."
+						: "Only an owner or an admin sets this key. Ask one of them to finish this step."}
+				</p>
+			</div>
 		</form>
 	);
 }

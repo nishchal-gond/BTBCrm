@@ -15,6 +15,8 @@ import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { membersSearchParams } from "./members-search-params";
 import { MembersTable } from "./members-table";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Members",
 };

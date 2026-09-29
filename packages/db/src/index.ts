@@ -1,3 +1,4 @@
+export { type ActorContext, withActor } from "./actor";
 export {
 	type Db,
 	db,

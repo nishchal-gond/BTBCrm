@@ -120,8 +120,20 @@ General — an admin who cannot redeploy cannot set a variable.
 - **It buys two places to look, not one.** Company brand data by domain, and a person
   read back from a LinkedIn URL already on their record. Both capabilities in
   `agent/lib/capabilities.ts` turn on and off with this one key.
-- **An install that had the variable is asked again**: no migration, no fallback, and
-  **the gate cannot be dismissed**.
+- **An install that had the variable is asked again**: no migration and no fallback.
+- **The gate can be deferred, once, by an owner or an admin.** `Not now` on
+  `/onboarding/research` calls `settings.deferResearchKey`, which stamps
+  `appSetting.contextDevDeferredAt`, and the proxy treats a deferral as settled.
+  A check constraint keeps the two mutually exclusive, and saving a key clears the
+  deferral. This exists because **the strongest rule in `AGENTS.md` is that anything
+  a self-hoster might not have is optional and must never throw** — and a CRM whose
+  Leads screen is unreachable without a third-party research vendor's key breaks it.
+  Company research stays off until a key is saved, which is the documented degraded
+  mode below. The card on Settings → General keeps asking.
+- **Nobody but an owner or an admin writes it.** `settings.setResearchKey`,
+  `deferResearchKey`, `setAgentModel` and `setArchiveRetention` all call
+  `canManageSettings(await workspaceRoleOf(userId))` first. Before that they did not,
+  and any member could replace the workspace's paid credential with their own.
 - **Nothing is lost while waiting.** A keyless `brand` task settles `SKIPPED` *before*
   anything marks the row `RUNNING`, and `settle` only overwrites `RUNNING` — so the
   company stays `PENDING`, which the sweep re-queues

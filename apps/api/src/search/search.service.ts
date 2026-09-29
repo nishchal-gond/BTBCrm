@@ -1,9 +1,10 @@
 import type { Db } from "@crm/db";
+import { type Actor, clientScope } from "@crm/db/access";
 import { Injectable } from "@nestjs/common";
 import { InjectDatabase } from "../database/database.constants";
 
 export type SearchHit = {
-	kind: "company" | "contact" | "deal";
+	kind: "client" | "company" | "contact" | "deal";
 	id: string;
 	label: string;
 	detail: string | null;
@@ -19,11 +20,36 @@ const PER_KIND = 5;
 export class SearchService {
 	constructor(@InjectDatabase() private readonly db: Db) {}
 
-	async quick(q: string): Promise<{ hits: SearchHit[] }> {
+	async quick(actor: Actor, q: string): Promise<{ hits: SearchHit[] }> {
 		const term = q.trim();
 		if (term.length < 2) return { hits: [] };
 
-		const [companies, contacts, deals] = await Promise.all([
+		const [clients, companies, contacts, deals] = await Promise.all([
+			this.db.client.findMany({
+				where: {
+					...clientScope(actor),
+					AND: [
+						{
+							OR: [
+								{ clientRef: { contains: term, mode: "insensitive" } },
+								{ firstName: { contains: term, mode: "insensitive" } },
+								{ lastName: { contains: term, mode: "insensitive" } },
+								{ email: { contains: term, mode: "insensitive" } },
+								{ phone: { contains: term } },
+							],
+						},
+					],
+				},
+				take: PER_KIND,
+				orderBy: { lastActivityAt: { sort: "desc", nulls: "last" } },
+				select: {
+					clientRef: true,
+					firstName: true,
+					lastName: true,
+					email: true,
+					status: true,
+				},
+			}),
 			this.db.company.findMany({
 				where: {
 					OR: [
@@ -82,6 +108,18 @@ export class SearchService {
 
 		return {
 			hits: [
+				...clients.map(
+					(client): SearchHit => ({
+						kind: "client",
+						id: client.clientRef,
+						label: `${client.firstName} ${client.lastName}`,
+						detail: `${client.clientRef} · ${client.status}`,
+						iconUrl: null,
+						iconDarkUrl: null,
+						iconTone: null,
+						imageUrl: null,
+					}),
+				),
 				...companies.map(
 					(company): SearchHit => ({
 						kind: "company",

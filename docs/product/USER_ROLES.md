@@ -21,7 +21,11 @@
 > deliberately excludes mentors. A mentor teaches; they do not need payment
 > history.
 >
-> Verified empirically by `npm run db:rls` (cases M1–M6, F1–F6).
+> **This banner outranks the body.** Where §3 or §4 below still describes the
+> three-role world — deposits for a mentor, most of all — the banner is what
+> runs. `PERMISSIONS.md` is the six-role table, reconciled against
+> `packages/db/src/access.ts`, and it is the one to read.
+>
 > The rest of this document remains accurate on ownership, provenance and
 > lifecycle semantics.
 
@@ -122,17 +126,18 @@ directory, programs, and their own tasks.
 - Reads and edits assigned clients' student-side data
 - Manages `enrollments` for assigned clients — program, cohort, progress, completion
 - Creates mentor sessions and reviews for assigned clients
-- Records deposits against assigned clients
 - Manages their own tasks
 - Is recorded as `converted_by` when they close a conversion
 
 **Cannot:**
 
 - See an unassigned client, or another mentor's client
+- **See money at all.** Not a deposit, not a total, not the Deposits page. The
+  banner at the top of this document is the decision, and
+  `canAccessFinancials` in `packages/db/src/access.ts` is where it lives.
 - Reassign ownership
 - Create company-wide events
 - Change their own role
-- Edit or delete deposits
 - Access `/settings/users` or `/audit`
 
 **Note on conversion:** a mentor becoming `converted_by` does not displace the sales
@@ -216,11 +221,11 @@ on them:
    `team_id` on `profiles` and an `app.manages(user_id)` helper joining the existing
    `can_access_client` predicate; the policy structure already accommodates it.
 
-2. **Mentor assignment permission.** Whether a salesperson can set `mentor_owner_id`
-   on their own client, or whether an admin must, is unresolved — see
-   [AUTHORIZATION.md](AUTHORIZATION.md) open decision 1. The recommendation is a
-   `security definer` `assign_mentor()` function callable by the sales owner, keeping
-   the blanket reassignment ban intact.
+2. ~~**Mentor assignment permission.**~~ **Settled.** The sales owner sets the first
+   mentor; only an admin moves the client to a different one. Two capabilities,
+   `clients.assignMentor` and `clients.reassignMentor`, and `assignMentor` demands
+   the second the moment the client already has a different mentor. The blanket
+   reassignment ban stays intact. See `PERMISSIONS.md` §1.
 
 3. **Mentor visibility before conversion.** A mentor currently sees a client the moment
    `mentor_owner_id` is set — i.e. at `mentor_assigned`, before conversion. That is

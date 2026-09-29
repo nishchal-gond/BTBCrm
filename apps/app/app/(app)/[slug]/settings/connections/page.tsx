@@ -10,6 +10,8 @@ import { requireSession } from "@/lib/session";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { AddConnectionDialog } from "./add-connection-dialog";
 
+export const instant = false;
+
 export const metadata: Metadata = { title: "Connections" };
 
 export default function ConnectionsSettingsPage(

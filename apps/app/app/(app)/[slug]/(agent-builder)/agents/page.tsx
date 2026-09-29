@@ -13,6 +13,8 @@ import {
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 
+export const instant = false;
+
 export const metadata: Metadata = { title: "Agents" };
 
 export default function AgentsPage() {

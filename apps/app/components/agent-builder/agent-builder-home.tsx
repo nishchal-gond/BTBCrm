@@ -47,7 +47,7 @@ export function AgentBuilderHome({ name }: { name: string }) {
 	return (
 		<main className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pt-14 pb-20 sm:px-6 sm:pt-12 sm:pb-28">
 			<div className="flex w-full max-w-3xl flex-col items-center gap-3 pb-6 text-center">
-				<h1 className="text-balance font-medium text-2xl tracking-tight sm:text-3xl">
+				<h1 className="text-balance font-semibold text-lg tracking-tight sm:text-xl">
 					What can I help with, {firstName(name)}?
 				</h1>
 				<p className="max-w-xl text-balance text-muted-foreground text-sm">

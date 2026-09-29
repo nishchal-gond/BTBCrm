@@ -5,6 +5,8 @@ import {
 	OAuthConnectionPage,
 } from "../oauth-connection-page";
 
+export const instant = false;
+
 export const metadata: Metadata = { title: "Google Workspace" };
 
 export default function GoogleConnectionPage(props: {

@@ -15,22 +15,29 @@ import {
 } from "@crm/ui/components/entity-logo";
 import { PersonAvatar } from "@crm/ui/components/person-avatar";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useTRPC } from "@/lib/trpc/client";
+import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 
 const GROUP_LABEL = {
+	client: "Clients",
 	company: "Companies",
 	contact: "Contacts",
 	deal: "Deals",
 } as const;
 
-const KINDS = ["company", "contact", "deal"] as const;
+const KINDS = ["client", "company", "contact", "deal"] as const;
+
+type Kind = (typeof KINDS)[number];
 
 export function QuickSwitcher() {
 	const openRecord = useOpenRecord();
+	const router = useRouter();
+	const workspaceUrl = useWorkspaceUrl();
 	const trpc = useTRPC();
 
 	const [open, setOpen] = useQueryState(
@@ -59,9 +66,15 @@ export function QuickSwitcher() {
 
 	const hits = results.data?.hits ?? [];
 
-	const go = (kind: (typeof KINDS)[number], id: string) => {
+	const go = (kind: Kind, id: string) => {
 		setQuery("");
 		void setOpen(null);
+
+		if (kind === "client") {
+			router.push(workspaceUrl(`/clients/${id}`));
+			return;
+		}
+
 		openRecord({ kind, id });
 	};
 
@@ -70,11 +83,11 @@ export function QuickSwitcher() {
 			open={open}
 			onOpenChange={(next) => setOpen(next || null)}
 			title="Search"
-			description="Jump to a company, contact or deal"
+			description="Jump to a client, company, contact or deal"
 		>
 			<Command shouldFilter={false}>
 				<CommandInput
-					placeholder="Search companies, contacts and deals…"
+					placeholder="Search by name, client ID, email or company…"
 					value={query}
 					onValueChange={setQuery}
 				/>
@@ -97,7 +110,7 @@ export function QuickSwitcher() {
 										value={`${hit.kind}:${hit.id}`}
 										onSelect={() => go(kind, hit.id)}
 									>
-										{hit.kind === "contact" ? (
+										{hit.kind === "contact" || hit.kind === "client" ? (
 											<PersonAvatar
 												src={hit.imageUrl}
 												name={hit.label}

@@ -20,7 +20,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 						<p className="font-mono text-xs/4 text-muted-foreground uppercase">
 							CRM
 						</p>
-						<h1 className="max-w-[14ch] text-5xl/14 font-semibold text-balance">
+						<h1 className="max-w-[14ch] text-2xl font-semibold text-balance">
 							Every customer, one place.
 						</h1>
 					</div>
@@ -53,11 +53,11 @@ export function AuthHeading({
 }) {
 	return (
 		<div className="flex flex-col gap-3 text-left">
-			<Link href="/" aria-label="Homepage" className="flex">
+			<Link href="/" aria-label="Homepage" className="inline-flex w-fit">
 				<Logo className="size-6 shrink-0" />
 			</Link>
 			<div className="flex flex-col gap-1">
-				<h2 className="text-2xl/8 font-semibold tracking-tight text-balance">
+				<h2 className="text-lg font-semibold tracking-tight text-balance">
 					{title}
 				</h2>
 				<p className="max-w-[32ch] text-sm/5 text-muted-foreground text-pretty">

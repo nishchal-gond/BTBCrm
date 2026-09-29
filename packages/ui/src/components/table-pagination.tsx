@@ -34,7 +34,7 @@ export function TablePagination({
 				{loading && <Spinner />}
 				{meta ??
 					(total === 0
-						? "No results"
+						? null
 						: `Showing ${numberFormat.format(rangeStart)}–${numberFormat.format(
 								rangeEnd,
 							)} of ${numberFormat.format(total)}`)}

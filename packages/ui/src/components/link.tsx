@@ -11,7 +11,7 @@ import type * as React from "react";
  * A link shaped like a control is a `Button` with `asChild`, not this.
  */
 const linkVariants = cva(
-	"rounded-xs underline-offset-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60",
+	"rounded-sm underline-offset-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60",
 	{
 		variants: {
 			variant: {

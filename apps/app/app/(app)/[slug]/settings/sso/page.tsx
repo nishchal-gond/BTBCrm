@@ -17,6 +17,8 @@ import { AddSsoProviderSheet } from "./add-sso-provider-sheet";
 import { ssoSearchParams } from "./sso-search-params";
 import { SsoTable } from "./sso-table";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "SSO",
 };

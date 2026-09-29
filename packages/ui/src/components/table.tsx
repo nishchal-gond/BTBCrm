@@ -6,11 +6,9 @@ import type * as React from "react";
 function Table({
 	className,
 	containerClassName,
-	overlay,
 	...props
 }: React.ComponentProps<"table"> & {
 	containerClassName?: string;
-	overlay?: React.ReactNode;
 }) {
 	return (
 		<div
@@ -19,10 +17,9 @@ function Table({
 		>
 			<table
 				data-slot="table"
-				className={cn("w-full caption-bottom text-xs", className)}
+				className={cn("w-full caption-bottom text-sm", className)}
 				{...props}
 			/>
-			{overlay}
 		</div>
 	);
 }
@@ -41,7 +38,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
 	return (
 		<tbody
 			data-slot="table-body"
-			className={cn("[&_tr:last-child]:border-0", className)}
+			className={cn("[&_tr]:border-subtle [&_tr:last-child]:border-0", className)}
 			{...props}
 		/>
 	);
@@ -65,7 +62,8 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 		<tr
 			data-slot="table-row"
 			className={cn(
-				"border-b transition-colors hover:bg-muted/60 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+				"border-b transition-colors duration-[var(--dur-fast)] ease-out hover:bg-muted/60 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+				"data-[clickable=true]:focus-visible:outline-2 data-[clickable=true]:focus-visible:outline-accent data-[clickable=true]:focus-visible:-outline-offset-2 data-[clickable=true]:focus-visible:bg-muted/60",
 				className,
 			)}
 			{...props}

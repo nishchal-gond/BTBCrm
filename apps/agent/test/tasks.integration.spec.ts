@@ -170,14 +170,14 @@ describe("retireExhausted", () => {
 			if (attempt < MAX_ATTEMPTS - 1) await expire(task.id);
 		}
 
-		expect(await retireExhausted()).toHaveLength(0);
+		expect((await retireExhausted()).map((t) => t.id)).not.toContain(task.id);
 	});
 
 	it("leaves work that still has attempts left", async () => {
-		await queue();
+		const task = await queue();
 		await claimDue(10, RESEARCH);
 
-		expect(await retireExhausted()).toHaveLength(0);
+		expect((await retireExhausted()).map((t) => t.id)).not.toContain(task.id);
 	});
 
 	it("retires no more rows than the limit allows", async () => {
@@ -197,6 +197,35 @@ describe("retireExhausted", () => {
 			where: { id: { in: mine }, finishedAt: null },
 		});
 		expect(open).toBe(0);
+	});
+
+	it("honours the limit whatever order the rows were written in", async () => {
+		const mine: string[] = [];
+		for (let row = 0; row < 4; row++) mine.push((await queue()).id);
+
+		const reversed = [...mine].reverse();
+
+		for (let seat = 0; seat < reversed.length; seat++) {
+			await db.agentTask.update({
+				where: { id: reversed[seat] as string },
+				data: { dueAt: new Date(Date.now() - (seat + 1) * 60_000) },
+			});
+		}
+
+		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+			const claimed = await claimDue(10, RESEARCH);
+			for (const task of claimed) await expire(task.id);
+		}
+
+		expect((await retireExhausted(2)).length).toBe(2);
+		expect((await retireExhausted(2)).length).toBe(2);
+	});
+
+	it("leases no more rows than the batch asks for", async () => {
+		for (let row = 0; row < 5; row++) await queue();
+
+		expect((await claimDue(2, RESEARCH)).length).toBe(2);
+		expect((await claimDue(2, RESEARCH)).length).toBe(2);
 	});
 });
 

@@ -32,23 +32,34 @@ A shadow on a near-black surface reads as smudge, not lift.
 
 ### Borders
 
-| Token | Value | Use |
-| ----- | ----- | --- |
-| `--border-subtle` | `#1E252C` | Table row dividers, quiet separation |
-| `--border-default` | `#2A333C` | Panel edges, input borders |
-| `--border-strong` | `#3A4550` | Focused input, emphasised boundary |
+| Token | Value | Contrast on canvas | Use |
+| ----- | ----- | ------------------ | --- |
+| `--border-subtle` | `#1E252C` | 1.26:1 | Table row dividers, quiet separation |
+| `--border-default` | `#2A333C` | 1.53:1 | Panel and card edges |
+| `--border-control` | `#646F7A` | 3.82:1 | The edge that identifies a control: input, select, checkbox, switch |
+| `--border-strong` | `#78838E` | 5.07:1 | Hovered or emphasised control boundary |
+
+The first two are decoration between two adjacent surfaces. They separate; they do
+not identify anything, so WCAG SC 1.4.11 does not reach them and they stay quiet.
+
+The last two are the boundary that tells a person where a control is. `--surface-input`
+is 1.03:1 from the canvas, so the fill says nothing and the border says everything.
+Both clear 3:1 on every surface in the ramp, `--surface-overlay` included — measure a
+proposed change against that surface, not against the canvas.
 
 ### Foreground
 
 | Token | Value | Contrast on canvas | Use |
 | ----- | ----- | ------------------ | --- |
-| `--fg-primary` | `#E8EDF2` | 15.8:1 | Values, headings, body |
-| `--fg-secondary` | `#98A4B0` | 7.4:1 | Supporting text |
-| `--fg-tertiary` | `#6B7885` | 4.6:1 | Labels — **at the floor, do not go lower** |
-| `--fg-disabled` | `#4A555F` | 2.6:1 | Disabled only; never for readable text |
+| `--fg-primary` | `#E8EDF2` | 16.62:1 | Values, headings, body |
+| `--fg-secondary` | `#98A4B0` | 7.71:1 | Supporting text |
+| `--fg-tertiary` | `#7E8B98` | 5.63:1 | Labels — **at the floor, do not go lower** |
+| `--fg-disabled` | `#4A555F` | 2.57:1 | Disabled only; never for readable text |
 
-`--fg-tertiary` at 4.6:1 is the lowest contrast permitted for any text a user must
-read. Low contrast is a hierarchy technique that stops at WCAG AA.
+`--fg-tertiary` is the lowest contrast permitted for any text a user must read. Low
+contrast is a hierarchy technique that stops at WCAG AA. The figure that matters is
+the worst surface, not the canvas: `--fg-tertiary` measures 4.50:1 on
+`--surface-overlay`, which is where the floor actually sits.
 
 ### Accent — brushed gold
 
@@ -57,23 +68,47 @@ one emphasised figure per screen.
 
 | Token | Value | Use |
 | ----- | ----- | --- |
-| `--accent` | `#C9A227` | Primary accent (10.1:1 on canvas) |
+| `--accent` | `#C9A227` | Primary accent (8.09:1 on canvas, 6.48:1 on overlay) |
 | `--accent-hover` | `#DDB53A` | Hover |
 | `--accent-press` | `#B08E1F` | Active |
 | `--accent-muted` | `rgba(201,162,39,0.12)` | Selected row, subtle fill |
-| `--accent-border` | `rgba(201,162,39,0.35)` | Accent-bordered surfaces |
+| `--accent-border` | `rgba(201,162,39,0.55)` | Accent-bordered surfaces |
 | `--accent-fg` | `#0A0C0F` | Text **on** an accent fill |
+
+`--accent-hover` and `--accent-press` are the button's hover and active fills. A
+component never re-derives them with `color-mix` — a darkened accent drops below
+4.5:1 against `--accent-fg`, and these two do not.
 
 ### Semantic — data only, never decoration
 
 | Token | Value | Meaning |
 | ----- | ----- | ------- |
 | `--positive` | `#3FB68B` | Gain, market open, success, paid |
-| `--negative` | `#E0574F` | Loss, market closed, error, overdue |
+| `--negative` | `#E2635B` | Loss, market closed, error, overdue |
+| `--negative-hover` | `#EA7A73` | Destructive button hover |
+| `--negative-press` | `#D1544D` | Destructive button active |
 | `--warning` | `#E0A23F` | Pre/post session, attention, pending |
 | `--info` | `#4A90C4` | Neutral information |
 
-Each has a `-muted` variant at 12% for badge fills and a `-border` at 35%.
+Each has a `-muted` variant at 12% for badge fills and a `-border` at 55%.
+
+Each also has an `-on-muted` variant: the text colour that sits on its own 12% fill.
+A semantic at full strength is tuned against the surface ramp, not against its own
+badge, and on that fill some of them fall under 4.5:1.
+
+| Token | Value | Worst measured on its `-muted` fill |
+| ----- | ----- | ----------------------------------- |
+| `--positive-on-muted` | `#3FB68B` | 5.02:1 |
+| `--negative-on-muted` | `#E87A74` | 4.80:1 |
+| `--warning-on-muted` | `#E0A23F` | 5.68:1 |
+| `--info-on-muted` | `#63A2CF` | 4.83:1 |
+
+Every semantic clears 4.5:1 on all six surfaces. `--negative` is the tightest, at
+4.61:1 on `--surface-overlay`, which is why it is lighter than a plain red.
+
+A `-border` at 55% is decoration. It outlines a badge that already carries a `-muted`
+fill, `-on-muted` text and a word, so nothing depends on the outline alone and it is
+not held to 3:1.
 
 **Colour never carries meaning alone.** Every semantic use is paired with a word or an
 icon: `● OPEN`, not a green dot alone. This serves colour-blind users and screenshot
@@ -309,7 +344,14 @@ data is behind, say so rather than showing a confident wrong number.
 
 ## 8. Accessibility
 
-- Text ≥ 4.5:1; large text and UI boundaries ≥ 3:1. **Measured, not judged.**
+- Text ≥ 4.5:1 on **every surface it appears on**, not only the canvas. **Measured,
+  not judged.** `--surface-overlay` is the hardest of the six and the one to measure
+  against.
+- A boundary that identifies a control or its state ≥ 3:1: the input border, the
+  checkbox edge, the focus ring. `--border-control` and `--border-strong` carry that
+  job and are measured. A divider between two surfaces identifies nothing — WCAG SC
+  1.4.11 does not reach it, and `--border-subtle` stays quiet on purpose. Do not
+  brighten a decorative border to chase a number that does not apply to it.
 - 2px `--accent` focus ring at 2px offset on every interactive element. `outline-none`
   without a replacement is a defect.
 - Full keyboard operation: tables, dialogs, menus, calendar, and globe city selection.
@@ -350,9 +392,9 @@ Spacing is restricted to the scale in §4 for the same reason.
 
 1. **Geist licensing and metrics** must be confirmed before implementation; Inter +
    JetBrains Mono is the fallback pairing if anything blocks it.
-2. **Accent contrast on `--surface-overlay`** — `#C9A227` on `#1D242B` should be
-   verified at 4.5:1 for small text; if it falls short, small accent text on overlays
-   uses `--accent-hover` instead.
+2. ~~**Accent contrast on `--surface-overlay`**~~ — **Settled.** `#C9A227` on
+   `#1D242B` measures 6.48:1. Small accent text on an overlay stays `--accent`;
+   `--accent-hover` is for hover only.
 3. **Dense row toggle** — specified at 30px but not yet validated against the longest
    realistic client name at `--text-sm`.
 4. **No light theme in v1.** If one is ever required, every colour must already be a

@@ -41,8 +41,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@crm/ui/components/table";
+import { useCompactTable } from "@crm/ui/hooks/use-media-query";
 import type { TableSelection } from "@crm/ui/hooks/use-table-selection";
-import { ROW_ACCENT, ROW_ACCENT_EXPANDABLE } from "@crm/ui/lib/row-accent";
+import { ROW_ACCENT } from "@crm/ui/lib/row-accent";
 import type { TableQueryState } from "@crm/ui/lib/table-query";
 import { cn } from "@crm/ui/lib/utils";
 import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
@@ -117,9 +118,11 @@ export type DataTableProps<TRow, TSub> = {
 	selection?: DataTableSelection<TRow>;
 	actions?: ReactNode;
 	leadingActions?: ReactNode;
+	rowLabel?: (row: TRow) => string;
 	search?: ReactNode;
 	meta?: ReactNode;
 	empty?: ReactNode;
+	cards?: (row: TRow) => ReactNode;
 	className?: string;
 	tableClassName?: string;
 };
@@ -274,11 +277,13 @@ export function DataTable<TRow, TSub = unknown>({
 	facets,
 	tabs,
 	onRowClick,
+	cards,
 	onRowHover,
 	expandable,
 	selection,
 	actions,
 	leadingActions,
+	rowLabel,
 	search,
 	meta,
 	empty,
@@ -300,6 +305,8 @@ export function DataTable<TRow, TSub = unknown>({
 	);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const filtersId = useId();
+	const compact = useCompactTable();
+	const asCards = cards != null && compact;
 
 	const hideable = columns.filter((column) => column.hideable !== false);
 	const visibleColumns = columns.filter(
@@ -322,6 +329,8 @@ export function DataTable<TRow, TSub = unknown>({
 		deferredRows.some((row) => expandable.isExpandable(row));
 	const selecting = selection != null && selection.state.count > 0;
 
+	const nothing = deferredRows.length === 0;
+
 	const pageSize = query.pageSize;
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -342,7 +351,6 @@ export function DataTable<TRow, TSub = unknown>({
 		sortableColumns.length > 0 ||
 		anyExpandable ||
 		hideable.length > 0 ||
-		actions != null ||
 		leadingActions != null;
 	const activeFacetFilterCount = availableFacets.filter(
 		(facet) => (query.filters[facet.id]?.length ?? 0) > 0,
@@ -391,7 +399,7 @@ export function DataTable<TRow, TSub = unknown>({
 					>
 						<span className="flex items-center gap-2">
 							<Filter />
-							Filters
+							Filters and sort
 							{activeFilterCount > 0 && (
 								<span className="tabular-nums opacity-60">
 									({activeFilterCount})
@@ -406,9 +414,6 @@ export function DataTable<TRow, TSub = unknown>({
 						/>
 					</Button>
 				)}
-				{/* `lg:contents` so the controls join the search on one row on desktop
-				    while staying a group the Filters button can collapse on mobile —
-				    search itself must never be inside that collapse. */}
 				<div
 					id={filtersId}
 					className={cn(
@@ -567,24 +572,46 @@ export function DataTable<TRow, TSub = unknown>({
 								</DropdownMenuContent>
 							</DropdownMenu>
 						)}
-						{actions}
 					</div>
+				</div>
+				<div className="flex flex-wrap gap-2 sm:w-auto sm:self-end lg:contents">
+					{actions}
 				</div>
 			</div>
 
+			{nothing ? (
+				<div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border bg-card px-4 py-12 text-center text-muted-foreground">
+					{loading ? (
+						<>
+							<Spinner />
+							<span className="sr-only">Loading results…</span>
+						</>
+					) : (
+						(empty ?? "No results found.")
+					)}
+				</div>
+			) : null}
+
+			{asCards && !nothing && cards ? (
+				<div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-card lg:hidden">
+					<ul className="flex flex-col divide-y divide-subtle">
+						{deferredRows.map((row) => (
+							<li key={getRowId(row)}>{cards(row)}</li>
+						))}
+					</ul>
+				</div>
+			) : null}
+
+			{asCards || nothing ? null : (
 			<Table
 				className={cn(
 					"table-fixed [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4",
 					tableClassName,
 				)}
-				containerClassName="min-h-0 flex-1 overflow-auto rounded-lg border bg-card"
-				overlay={
-					deferredRows.length === 0 ? (
-						<div className="absolute inset-x-0 top-11 bottom-0 flex items-center justify-center px-4 py-8 text-center text-muted-foreground">
-							{loading ? <Spinner /> : (empty ?? "No results found.")}
-						</div>
-					) : null
-				}
+				containerClassName={cn(
+					"min-h-0 flex-1 overflow-auto rounded-lg border bg-card",
+					cards != null && "max-lg:hidden",
+				)}
 			>
 				<TableHeader className="sticky top-0 z-10 bg-muted [&_th]:bg-muted [&_tr]:border-0 [&_tr]:shadow-[inset_0_-1px_0_var(--border)]">
 					<TableRow>
@@ -677,20 +704,34 @@ export function DataTable<TRow, TSub = unknown>({
 							<Fragment key={id}>
 								<TableRow
 									data-state={isSelected ? "selected" : undefined}
+									data-clickable={clickable ? "true" : undefined}
+									tabIndex={clickable ? 0 : undefined}
+									aria-expanded={canExpand ? isOpen : undefined}
+									aria-label={
+										clickable && rowLabel ? rowLabel(row) : undefined
+									}
 									onClick={clickable ? handleClick : undefined}
-									onMouseEnter={onRowHover ? () => onRowHover(row) : undefined}
-									onFocus={onRowHover ? () => onRowHover(row) : undefined}
-									className={
+									onKeyDown={
 										clickable
-											? anyExpandable
-												? ROW_ACCENT_EXPANDABLE
-												: ROW_ACCENT
+											? (event) => {
+													if (event.key !== "Enter" && event.key !== " ") {
+														return;
+													}
+
+													if (event.target !== event.currentTarget) return;
+
+													event.preventDefault();
+													handleClick();
+												}
 											: undefined
 									}
+									onMouseEnter={onRowHover ? () => onRowHover(row) : undefined}
+									onFocus={onRowHover ? () => onRowHover(row) : undefined}
+									className={clickable ? ROW_ACCENT : undefined}
 								>
 									{selection && (
 										<TableCell
-											className={cn("w-10 px-3 py-3", HIDE_BELOW_CLASS.sm)}
+											className={cn("w-10 px-3 py-2", HIDE_BELOW_CLASS.sm)}
 											onClick={(event) => event.stopPropagation()}
 										>
 											<Checkbox
@@ -707,7 +748,7 @@ export function DataTable<TRow, TSub = unknown>({
 										</TableCell>
 									)}
 									{anyExpandable && (
-										<TableCell className="w-10 px-3 py-3 text-center text-muted-foreground">
+										<TableCell className="w-10 px-3 py-2 text-center text-muted-foreground">
 											{canExpand && (
 												<ChevronRight
 													size={12}
@@ -723,7 +764,7 @@ export function DataTable<TRow, TSub = unknown>({
 										<TableCell
 											key={column.id}
 											className={cn(
-												"overflow-hidden px-3 py-3",
+												"overflow-hidden px-3 py-2",
 												column.width,
 												ALIGN_CLASS[column.align ?? "left"],
 												column.hideBelow && HIDE_BELOW_CLASS[column.hideBelow],
@@ -747,10 +788,7 @@ export function DataTable<TRow, TSub = unknown>({
 												}
 												className={cn(
 													"bg-muted/30",
-													subClickable &&
-														(anyExpandable
-															? ROW_ACCENT_EXPANDABLE
-															: ROW_ACCENT),
+													subClickable && ROW_ACCENT,
 												)}
 											>
 												{selection && (
@@ -787,6 +825,7 @@ export function DataTable<TRow, TSub = unknown>({
 					})}
 				</TableBody>
 			</Table>
+			)}
 
 			<TablePagination
 				page={query.page}

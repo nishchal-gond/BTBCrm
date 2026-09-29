@@ -40,6 +40,11 @@ shadcn, nuqs and others. Agents live in `.claude/agents/`: `visual-designer`,
 
 ## The product rules — always true
 
+- **Two business lines, one platform.** Trading Academy and Real Estate share
+  the person record, the pipeline machinery, money, audit and search.
+  `client.vertical` says which pipeline a record is worked in. It is not a
+  tenant id and it never splits a person into two rows.
+  `docs/product/VERTICALS.md`.
 - **One human = one row = one permanent Client ID.** Lead, qualified,
   mentor-assigned, converted and student are statuses of one record. Conversion
   is an update. It never inserts a person. `docs/product/DATABASE.md` §4.

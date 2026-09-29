@@ -17,6 +17,8 @@ import { CreateDealSheet } from "./create-deal-sheet";
 import { dealsSearchParams } from "./deals-search-params";
 import { DealsTable } from "./deals-table";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Deals",
 };

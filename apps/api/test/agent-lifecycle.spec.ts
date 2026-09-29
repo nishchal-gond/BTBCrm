@@ -12,7 +12,8 @@ const teammateId = `agent-lifecycle-teammate-${suffix}`;
 const memberId = `agent-lifecycle-member-${suffix}`;
 const teammateMemberId = `agent-lifecycle-teammate-member-${suffix}`;
 const joinChannel = `renewals-${suffix}`;
-const joinReason = `Add Comp AI to #${joinChannel}`;
+const joinChannelId = `C-${suffix}`;
+const joinReason = `Add Trading Academy CRM to #${joinChannel}`;
 const access = new AgentAccessService(db);
 const agents = new AgentDefinitionsService(
 	db,
@@ -614,7 +615,7 @@ describe("agent lifecycle", () => {
 			{
 				id: agentId,
 				clientRequestId: crypto.randomUUID(),
-				channel: { id: "C0009", name: joinChannel },
+				channel: { id: joinChannelId, name: joinChannel },
 			},
 			userId,
 		);
@@ -635,14 +636,14 @@ describe("agent lifecycle", () => {
 			actions: [
 				{
 					type: "slack.message.post",
-					destination: { id: "C0009", label: `#${joinChannel}` },
+					destination: { id: joinChannelId, label: `#${joinChannel}` },
 				},
 				{ type: "crm.note.write" },
 			],
 		});
 		expect(join?.payload).toMatchObject({
 			type: "slack.channel.join",
-			channelId: "C0009",
+			channelId: joinChannelId,
 			channelName: joinChannel,
 		});
 	});

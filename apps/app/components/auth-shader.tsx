@@ -3,7 +3,7 @@ export function AuthShader() {
 		<>
 			<div
 				aria-hidden="true"
-				className="absolute inset-0 size-full opacity-60 bg-[radial-gradient(circle_at_20%_20%,#2e2e2e,transparent_55%),radial-gradient(circle_at_80%_0%,#1a1a1a,transparent_50%),radial-gradient(circle_at_60%_90%,#ededed_0%,transparent_40%),linear-gradient(#000000,#000000)]"
+				className="absolute inset-0 size-full opacity-60 bg-[radial-gradient(circle_at_20%_20%,var(--surface-overlay),transparent_55%),radial-gradient(circle_at_80%_0%,var(--surface-raised),transparent_50%),radial-gradient(circle_at_60%_90%,var(--accent-muted)_0%,transparent_40%),linear-gradient(var(--surface-canvas),var(--surface-canvas))]"
 			/>
 			<div
 				aria-hidden="true"

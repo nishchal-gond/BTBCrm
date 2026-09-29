@@ -140,6 +140,32 @@ self-hoster's admin cannot redeploy.
   regenerate it** — the generator needs GLIBC 2.39, newer than Vercel's build image.
   Only `check-types` and `dev` run it. If the app cannot see a new procedure, it has
   not run.
+- **`dev` watches routers with `apps/api/scripts/watch-trpc.ts`, not `nestjs-trpc
+  watch`.** The vendor watcher asks inotify for `IN_OPEN` and then opens every file
+  under `src` to generate, so it reads its own reads and regenerates once a second
+  for ever. Our watcher reacts to writes on `*.router.ts` and `app.module.ts`, skips
+  `src/generated`, debounces, and runs one generation at a time.
+
+## The domain modules
+
+`clients`, `deposits`, `programs`, `events` and `overview` are the Trading Academy.
+Every one of them carries `ActorMiddleware` as well as `AuthMiddleware`, takes
+`ctx.actor`, and asks `packages/db/src/access.ts` before it asks Prisma anything.
+
+- **`clients`** — the one person record. `workspace` resolves the business line and
+  says what the viewer may do; `list` is three views over one predicate; the three
+  ownership procedures and `convert` are the only writers of the ownership columns.
+- **`deposits`** — append-only. No update procedure, no delete procedure, and the
+  database refuses both anyway. Totals are SQL aggregates, never a stored column and
+  never a full-table read.
+- **`programs`** — the catalogue and the enrolments. `enroll` writes the enrolment
+  and moves `CONVERTED → STUDENT` in one transaction, because the trigger that
+  demands an active enrolment has to see it.
+- **`events`** — a client's schedule, invitations and cancellations, plus `busy`,
+  which returns `userId`, `startsAt` and `endsAt` and nothing else. Any endpoint that
+  returns whole events for scheduling is the leak that procedure exists to prevent.
+- **`overview`** — the landing screen's figures, every one of them counted through
+  `clientScope(actor)`.
 
 ## The OpenAPI document is built at runtime, not committed
 

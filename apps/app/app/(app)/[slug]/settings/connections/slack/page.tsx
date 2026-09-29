@@ -32,6 +32,8 @@ import {
 import { SlackDisconnectButton } from "./slack-disconnect-button";
 import { SlackScopeGroups } from "./slack-scope-groups";
 
+export const instant = false;
+
 const PRIVATE_CHANNEL_SCOPES = [
 	"groups:read",
 	"groups:history",

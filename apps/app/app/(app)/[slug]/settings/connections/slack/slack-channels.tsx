@@ -75,7 +75,9 @@ export function SlackChannels() {
 		<section className="flex flex-col gap-3 px-(--spacing-block-inline)">
 			<div className="flex items-end justify-between gap-4">
 				<div>
-					<h2 className="font-medium text-sm">Channels Trading Academy CRM can reach</h2>
+					<h2 className="font-medium text-sm">
+						Channels Trading Academy CRM can reach
+					</h2>
 					<p className="text-muted-foreground text-xs">
 						Agents pick from this list.
 					</p>
@@ -92,7 +94,8 @@ export function SlackChannels() {
 
 			{channels.stalled ? (
 				<p className="text-warning text-xs">
-					Trading Academy CRM is not reading Slack right now. The list can be out of date.
+					Trading Academy CRM is not reading Slack right now. The list can be
+					out of date.
 				</p>
 			) : null}
 
@@ -206,7 +209,9 @@ function AskDialog({
 						onClick={canInviteItself ? onConfirm : () => void copyThenConfirm()}
 					>
 						<AsyncButtonContent pendingLabel="Adding…" status={status}>
-							{canInviteItself ? "Add Trading Academy CRM" : "Copy and mark as asked"}
+							{canInviteItself
+								? "Add Trading Academy CRM"
+								: "Copy and mark as asked"}
 						</AsyncButtonContent>
 					</Button>
 				</AlertDialogFooter>

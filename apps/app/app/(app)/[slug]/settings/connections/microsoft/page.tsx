@@ -5,6 +5,8 @@ import {
 	OAuthConnectionPage,
 } from "../oauth-connection-page";
 
+export const instant = false;
+
 export const metadata: Metadata = { title: "Microsoft 365" };
 
 export default function MicrosoftConnectionPage(props: {

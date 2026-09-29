@@ -14,6 +14,8 @@ import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { CurrencySettings } from "./currency-settings";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "Currencies",
 };

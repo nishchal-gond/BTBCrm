@@ -1,15 +1,22 @@
+import { canManageSettings, workspaceRoleOf } from "@crm/auth";
 import type { Db } from "@crm/db";
 import {
 	DEFAULT_AGENT_MODEL,
+	deferContextDevKey,
 	maskKey,
 	readAgentModel,
 	readArchiveRetentionDays,
-	readContextDevKey,
+	readContextDevGate,
 	writeAgentModel,
 	writeArchiveRetentionDays,
 	writeContextDevKey,
 } from "@crm/db/settings";
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import {
+	BadRequestException,
+	ForbiddenException,
+	Injectable,
+	Logger,
+} from "@nestjs/common";
 import { ResearchKeyService } from "../agent/research-key.service";
 import { BackfillService } from "../backfill/backfill.service";
 import { InjectDatabase } from "../database/database.constants";
@@ -32,6 +39,18 @@ export class SettingsService {
 		private readonly backfill: BackfillService,
 	) {}
 
+	private async canManage(userId: string): Promise<boolean> {
+		return canManageSettings(await workspaceRoleOf(userId));
+	}
+
+	private async requireManager(userId: string, what: string): Promise<void> {
+		if (!(await this.canManage(userId))) {
+			throw new ForbiddenException(
+				`Only an owner or an admin can change ${what}.`,
+			);
+		}
+	}
+
 	async agentModel(): Promise<AgentModelSettings> {
 		const [model, row] = await Promise.all([
 			readAgentModel(this.db),
@@ -47,7 +66,12 @@ export class SettingsService {
 		};
 	}
 
-	async setAgentModel(modelId: string | null): Promise<AgentModelSettings> {
+	async setAgentModel(
+		actingUserId: string,
+		modelId: string | null,
+	): Promise<AgentModelSettings> {
+		await this.requireManager(actingUserId, "which model the agent runs on");
+
 		if (modelId === null) {
 			await writeAgentModel(this.db, null);
 			this.logger.log({ message: "Agent model reset to the default" });
@@ -85,13 +109,38 @@ export class SettingsService {
 		return { models: models ?? [], available: models !== null };
 	}
 
-	async researchKey(): Promise<ResearchKeySettings> {
-		const key = await readContextDevKey(this.db);
+	async researchKey(actingUserId: string): Promise<ResearchKeySettings> {
+		const [gate, canManage] = await Promise.all([
+			readContextDevGate(this.db),
+			this.canManage(actingUserId),
+		]);
 
-		return { configured: key !== null, hint: key ? maskKey(key) : null };
+		return {
+			configured: gate.key !== null,
+			deferred: gate.deferredAt !== null,
+			hint: gate.key ? maskKey(gate.key) : null,
+			canManage,
+		};
 	}
 
-	async setResearchKey(apiKey: string): Promise<ResearchKeySettings> {
+	async deferResearchKey(actingUserId: string): Promise<ResearchKeySettings> {
+		await this.requireManager(actingUserId, "the research key");
+
+		const gate = await readContextDevGate(this.db);
+
+		if (gate.key === null) await deferContextDevKey(this.db);
+
+		this.logger.log({ message: "Research key deferred" });
+
+		return this.researchKey(actingUserId);
+	}
+
+	async setResearchKey(
+		actingUserId: string,
+		apiKey: string,
+	): Promise<ResearchKeySettings> {
+		await this.requireManager(actingUserId, "the research key");
+
 		const check = await this.researchKeys.verify(apiKey);
 
 		if (check.outcome === "invalid") {
@@ -127,14 +176,19 @@ export class SettingsService {
 				);
 			});
 
-		return this.researchKey();
+		return this.researchKey(actingUserId);
 	}
 
 	async archiveRetention(): Promise<ArchiveRetentionSettings> {
 		return { days: await readArchiveRetentionDays(this.db) };
 	}
 
-	async setArchiveRetention(days: number): Promise<ArchiveRetentionSettings> {
+	async setArchiveRetention(
+		actingUserId: string,
+		days: number,
+	): Promise<ArchiveRetentionSettings> {
+		await this.requireManager(actingUserId, "how long archived records live");
+
 		const saved = await writeArchiveRetentionDays(this.db, days);
 
 		this.logger.log({

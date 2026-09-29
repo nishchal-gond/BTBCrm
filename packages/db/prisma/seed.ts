@@ -11,6 +11,7 @@ import {
 	RateSource,
 } from "../src/generated/prisma/enums";
 import { readReportingCurrency, SETTINGS_ID } from "../src/settings";
+import { seedAcademy } from "./seed-academy";
 
 function makeRandom(seed: number): () => number {
 	let a = seed;
@@ -369,7 +370,7 @@ async function seedOwners(): Promise<string[]> {
 	return created.map((user) => user.id);
 }
 
-const STAFF_ROLE_CYCLE = ["ADMIN", "SALES", "MENTOR"] as const;
+const STAFF_ROLE_CYCLE = ["SALES", "MENTOR"] as const;
 
 async function seedStaff(ownerIds: string[]): Promise<void> {
 	for (const [index, userId] of ownerIds.entries()) {
@@ -1018,6 +1019,8 @@ async function main() {
 	const activities = await seedActivities(companies, contacts, deals, ownerIds);
 	const companyFields = await seedCompanyFields();
 	await seedCompanyFieldValues(companyFields, companies, ownerIds);
+
+	await seedAcademy();
 
 	console.log(
 		`Seeded ${companies.length} companies, ${contacts.length} contacts, ` +

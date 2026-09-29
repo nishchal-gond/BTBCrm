@@ -17,6 +17,8 @@ import { apiKeysSearchParams } from "./api-keys-search-params";
 import { ApiKeysTable } from "./api-keys-table";
 import { CreateApiKeySheet } from "./create-api-key-sheet";
 
+export const instant = false;
+
 export const metadata: Metadata = {
 	title: "API Keys",
 };

@@ -34,7 +34,7 @@ describe("parseEnv", () => {
 	});
 
 	it("keeps base64 padding, which openssl rand emits", () => {
-		const secret = "6oXI/PGPx8OGGiVz7zW2EODV6LcKmtyALiR+RvG2yc8=";
+		const secret = "NOT-A-SECRET-base64-padding-check==";
 		expect(parseEnv(`BETTER_AUTH_SECRET="${secret}"`)).toEqual({
 			BETTER_AUTH_SECRET: secret,
 		});

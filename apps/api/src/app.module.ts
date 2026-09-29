@@ -9,6 +9,7 @@ import { ArchiveModule } from "./archive/archive.module";
 import { AuthModule } from "./auth/auth.module";
 import { BackfillModule } from "./backfill/backfill.module";
 import { AppCacheModule } from "./cache/cache.module";
+import { ClientsModule } from "./clients/clients.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { validateEnv } from "./config/env.validation";
 import { ContactsModule } from "./contacts/contacts.module";
@@ -18,7 +19,9 @@ import { CurrencyModule } from "./currency/currency.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DatabaseModule } from "./database/database.module";
 import { DealsModule } from "./deals/deals.module";
+import { DepositsModule } from "./deposits/deposits.module";
 import { EnrichmentModule } from "./enrichment/enrichment.module";
+import { EventsModule } from "./events/events.module";
 import { FieldsModule } from "./fields/fields.module";
 import { GoogleModule } from "./google/google.module";
 import { HealthModule } from "./health/health.module";
@@ -26,6 +29,8 @@ import { LoggingModule } from "./logging/logging.module";
 import { logAuthRoute } from "./logging/request-logger.middleware";
 import { MailboxModule } from "./mailbox/mailbox.module";
 import { MicrosoftModule } from "./microsoft/microsoft.module";
+import { OverviewModule } from "./overview/overview.module";
+import { ProgramsModule } from "./programs/programs.module";
 import { SavedViewsModule } from "./saved-views/saved-views.module";
 import { SearchModule } from "./search/search.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -75,6 +80,11 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		WorkspaceModule,
 		SsoModule,
 		StaffModule,
+		ClientsModule,
+		DepositsModule,
+		EventsModule,
+		OverviewModule,
+		ProgramsModule,
 		SlackModule,
 		BackfillModule,
 		TelemetryModule,
